@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { JobOffer, UserProfile } from "@/types";
-import { Search, MapPin, ExternalLink, Sparkles, Building2, Layers, CheckCircle2, Link2, PlusCircle, FileText, Calendar, Clock, ArrowUpDown, RefreshCw, UserCheck } from "lucide-react";
+import { Search, MapPin, ExternalLink, Sparkles, Building2, Layers, CheckCircle2, Link2, PlusCircle, FileText, Calendar, Clock, ArrowUpDown, RefreshCw, UserCheck, AlertCircle } from "lucide-react";
 import { importOffer, suggestKeywordsFromCv, AiKeywordsSuggestion } from "@/lib/api";
 
 const formatDateFrench = (dateStr?: string) => {
@@ -69,10 +69,12 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   // AI Keyword Suggestion State
   const [suggestingAi, setSuggestingAi] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AiKeywordsSuggestion | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Handler to populate search query using AI analysis of candidate's CV
   const handleAiSuggestKeywords = async () => {
     setSuggestingAi(true);
+    setAiError(null);
     try {
       const res = await suggestKeywordsFromCv(profile);
       if (res && res.suggested_query) {
@@ -80,6 +82,9 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         setAiSuggestions(res);
         onSearch(res.suggested_query, location);
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'analyse du CV.";
+      setAiError(msg);
     } finally {
       setSuggestingAi(false);
     }
@@ -118,11 +123,13 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   const [importUrl, setImportUrl] = useState("");
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!importUrl.trim() && !importText.trim()) return;
     setImporting(true);
+    setImportError(null);
     try {
       const newOffer = await importOffer(importUrl, importText);
       if (newOffer) {
@@ -132,6 +139,9 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         setImportText("");
         onSelectForLetter(newOffer);
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Impossible d'importer cette offre.";
+      setImportError(msg);
     } finally {
       setImporting(false);
     }
@@ -260,6 +270,14 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                 className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-swiss-border rounded-swiss focus:border-swiss-blue focus:ring-1 focus:ring-swiss-blue outline-none"
               />
             </div>
+
+            {/* AI Keywords Error Banner */}
+            {aiError && (
+              <div data-testid="ai-suggest-error" role="alert" className="mt-2 p-2 bg-rose-50 border border-rose-200 text-rose-800 rounded-swiss text-xs font-mono flex items-center space-x-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>{aiError}</span>
+              </div>
+            )}
 
             {/* AI Keywords Suggestion Banner */}
             {aiSuggestions && (
@@ -449,8 +467,15 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
               </div>
 
               <div className="p-3 bg-swiss-neutral/40 rounded border border-swiss-border text-[11px] font-sans text-swiss-muted">
-                Gemini extrait automatiquement le titre, les compétences requises, la culture d'équipe et génère les lettres ciblées.
+                Gemini extrait automatiquement le titre, les compétences requises, la culture d&apos;équipe et génère les lettres ciblées.
               </div>
+
+              {importError && (
+                <div data-testid="import-offer-error" role="alert" className="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded text-xs font-mono flex items-center space-x-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>{importError}</span>
+                </div>
+              )}
 
               <div className="flex justify-end space-x-2 pt-2 border-t border-swiss-neutral">
                 <button
@@ -606,7 +631,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                       )}
                       {job.salary && (
                         <span className="swiss-badge bg-emerald-50 text-emerald-900 border border-emerald-300 font-mono text-[10px] font-bold">
-                          💰 {job.salary}
+                          RÉMUNÉRATION: {job.salary}
                         </span>
                       )}
                       {job.sponsorship && (
@@ -719,7 +744,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
 
                     <a
                       href={
-                        job.url && job.url !== "nan" && job.url.startsWith("http")
+                        job.url && job.url !== "nan" && /^https?:\/\//i.test(job.url)
                           ? job.url
                           : `https://www.google.com/search?q=${encodeURIComponent(`Stage ${job.title} ${job.company} ${job.location}`)}`
                       }

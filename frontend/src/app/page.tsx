@@ -29,12 +29,12 @@ export default function Home() {
   const [loadingOffers, setLoadingOffers] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
-    full_name: "Ingénieur Stagiaire",
-    email: "etudiant@institution.edu",
-    phone: "+33 6 00 00 00 00",
-    education: "Master 2 / École d'Ingénieurs — Systèmes Embarqués & IA",
-    target_domains: ["Systèmes Embarqués", "Edge AI", "Traitement du Signal"],
-    technical_skills: ["C++", "PyTorch", "OpenCV", "Linux Embarqué", "FreeRTOS", "FPGA"],
+    full_name: "",
+    email: "",
+    phone: "",
+    education: "",
+    target_domains: [],
+    technical_skills: [],
     key_projects: [],
   });
   const [uploadingCv, setUploadingCv] = useState(false);
@@ -123,7 +123,7 @@ export default function Home() {
       const updated = await uploadCvFile(file);
       setProfile(updated);
 
-      // Immediately refresh search offers using the newly extracted CV specialties
+      // Refresh search offers in background using the newly extracted CV specialties
       let cvQuery = "";
       if (updated.target_domains && updated.target_domains.length > 0) {
         cvQuery = updated.target_domains.slice(0, 3).join(", ");
@@ -131,7 +131,7 @@ export default function Home() {
         cvQuery = updated.technical_skills.slice(0, 4).join(", ");
       }
       if (cvQuery) {
-        await handleSearch(cvQuery, "");
+        void handleSearch(cvQuery, "");
       }
     } finally {
       setUploadingCv(false);
@@ -149,19 +149,27 @@ export default function Home() {
   };
 
   const handleUpdateStatus = async (id: string, newStatus: HistoryEntry["status"]) => {
+    const previous = history;
     setHistory((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
     const updated = await updateHistoryStatus(id, newStatus);
-    if (updated && updated.length > 0) {
+    if (updated) {
       setHistory(updated);
+    } else {
+      setHistory(previous);
     }
   };
 
   const handleDeleteHistory = async (id: string) => {
+    const previous = history;
     setHistory((prev) => prev.filter((item) => item.id !== id));
     const updated = await deleteHistoryEntry(id);
-    setHistory(updated);
+    if (updated) {
+      setHistory(updated);
+    } else {
+      setHistory(previous);
+    }
   };
 
   const handleSaveSettings = async (updated: AppSettings) => {

@@ -96,7 +96,8 @@ export interface WorkerState {
 export interface RegistrySource {
   id: string;
   name: string;
-  url: string;
+  url?: string;
+  target_sites?: string[];
   type: string;
   enabled: boolean;
   description: string;

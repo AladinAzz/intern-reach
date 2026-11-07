@@ -243,15 +243,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <p className="text-[11px] text-swiss-muted font-sans mt-0.5 line-clamp-1">
                         {src.description}
                       </p>
-                      <a
-                        href={src.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-swiss-blue font-mono hover:underline inline-flex items-center space-x-1 mt-1 truncate max-w-sm"
-                      >
-                        <span className="truncate">{src.url}</span>
-                        <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
-                      </a>
+                      {src.target_sites && src.target_sites.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {src.target_sites.map((site) => (
+                            <span
+                              key={site}
+                              className="px-1.5 py-0.5 text-[10px] font-mono bg-swiss-neutral rounded text-swiss-muted border border-swiss-border"
+                            >
+                              {site}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {src.url && (
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-swiss-blue font-mono hover:underline inline-flex items-center space-x-1 mt-1 truncate max-w-sm"
+                        >
+                          <span className="truncate">{src.url}</span>
+                          <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                        </a>
+                      )}
                     </div>
 
                     <button
@@ -277,7 +291,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span className="font-mono text-swiss-blue font-semibold">Toutes les 6 heures</span>
               </div>
               <p className="text-[11px] text-swiss-muted leading-relaxed">
-                Le worker interroge automatiquement les registres GitHub sans clé d'API, déduplique les offres contre le catalogue local et teste la liveness HTTP de chaque URL pour signaler les clôtures.
+                Le worker interroge automatiquement les moteurs de recherche en direct (JobSpy &amp; DDGS) selon les spécialités de votre CV, déduplique les offres et teste la liveness HTTP de chaque URL.
               </p>
             </div>
           </div>

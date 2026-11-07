@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { JobOffer, LetterVersion, HistoryEntry, PitchAndGap, InterviewQuestion, UserProfile } from "@/types";
-import { Copy, Printer, Bookmark, Sparkles, MessageSquare, Check, RefreshCw, Building2, MapPin, Mail, Share2, HelpCircle, CheckCircle2, AlertTriangle, Lightbulb } from "lucide-react";
+import { Copy, Printer, Bookmark, Sparkles, MessageSquare, Check, RefreshCw, Building2, MapPin, Mail, Share2, HelpCircle, CheckCircle2, AlertTriangle, Lightbulb, AlertCircle } from "lucide-react";
 import { getPitchAndGap, getInterviewPrep } from "@/lib/api";
 
 interface LetterStudioProps {
@@ -28,10 +28,11 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
   const [editedContent, setEditedContent] = useState("");
   const [feedback, setFeedback] = useState("");
   const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // New Features State
+  // Pitch & Gap and Interview Prep State
   const [pitchAndGap, setPitchAndGap] = useState<PitchAndGap | null>(null);
   const [loadingPitch, setLoadingPitch] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -43,28 +44,36 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
 
   // Sync editedContent with active version
   useEffect(() => {
-    if (versions && versions.length > 0 && versions[selectedVersionIdx]) {
-      setEditedContent(versions[selectedVersionIdx].content);
+    if (versions && versions.length > 0) {
+      const idx = selectedVersionIdx < versions.length ? selectedVersionIdx : 0;
+      if (versions[idx]) {
+        setEditedContent(versions[idx].content);
+      }
     }
   }, [versions, selectedVersionIdx]);
 
-  // Load Pitch & Gap Analysis when job or profile identity changes
+  // Load Pitch & Gap Analysis and reset per-job state when job or profile identity changes
   const jobKey = job?.id;
   const profileKey = `${profile?.full_name}-${profile?.technical_skills?.join(",")}`;
 
   useEffect(() => {
+    setQuestions([]);
+    setSelectedVersionIdx(0);
+    setRefineError(null);
     if (job) {
       setLoadingPitch(true);
       getPitchAndGap(job, profile)
         .then((res) => setPitchAndGap(res))
         .finally(() => setLoadingPitch(false));
+    } else {
+      setPitchAndGap(null);
     }
   }, [jobKey, profileKey]);
 
-  const handleOpenQuestions = async () => {
+  const handleOpenQuestions = async (forceRefresh = false) => {
     if (!job) return;
     setIsQuestionsOpen(true);
-    if (questions.length === 0) {
+    if (questions.length === 0 || forceRefresh) {
       setLoadingQuestions(true);
       try {
         const res = await getInterviewPrep(job, profile);
@@ -83,7 +92,7 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
           Aucune offre sélectionnée pour le moment
         </h3>
         <p className="text-xs text-swiss-muted font-sans max-w-md mx-auto">
-          Accédez à l'onglet « Recherche d'Offres » et cliquez sur « Rédiger la Lettre » pour analyser la demande d'un recruteur et générer des versions adaptées.
+          Accédez à l&apos;onglet « Recherche d&apos;Offres » et cliquez sur « Rédiger la Lettre » pour analyser la demande d&apos;un recruteur et générer des versions adaptées.
         </p>
         <button
           onClick={onBackToSearch}
@@ -128,10 +137,14 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
     e.preventDefault();
     if (!feedback.trim()) return;
     setRefining(true);
+    setRefineError(null);
     try {
       const updated = await onRefine(editedContent, feedback);
       setEditedContent(updated);
       setFeedback("");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur lors de la révision par l'IA.";
+      setRefineError(msg);
     } finally {
       setRefining(false);
     }
@@ -180,12 +193,12 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
 
           <div className="flex flex-wrap items-center space-x-2 shrink-0">
             <button
-              onClick={handleOpenQuestions}
+              onClick={() => handleOpenQuestions(false)}
               className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-swiss-blue hover:bg-blue-100 text-xs font-mono font-semibold rounded-swiss transition-colors"
               title="Anticiper les 5 questions techniques d'entretien"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>SIMULATEUR D'ENTRETIEN</span>
+              <span>SIMULATEUR D&apos;ENTRETIEN</span>
             </button>
             <button
               onClick={handleCopy}
@@ -231,7 +244,7 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
             <div className="md:col-span-4 space-y-1">
               <span className="font-mono text-amber-800 font-semibold flex items-center space-x-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                <span>Points d'Attention / À Valoriser ({pitchAndGap.missing_skills.length})</span>
+                <span>Points d&apos;Attention / À Valoriser ({pitchAndGap.missing_skills.length})</span>
               </span>
               <div className="flex flex-wrap gap-1">
                 {pitchAndGap.missing_skills.length > 0 ? (
@@ -330,11 +343,18 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
       <div className="swiss-card p-6 bg-swiss-neutral/30 no-print space-y-3">
         <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-swiss-black">
           <MessageSquare className="w-4 h-4 text-swiss-blue" />
-          <span>BOUCLE D'ASSISTANCE & RETOURS UTILISATEUR</span>
+          <span>BOUCLE D&apos;ASSISTANCE & RETOURS UTILISATEUR</span>
         </div>
         <p className="text-xs text-swiss-muted font-sans">
           Indiquez vos ajustements sur cette version (ex: <em>« Insiste davantage sur mon projet de SLAM sous ROS 2 »</em> ou <em>« Raccourcis à 3 paragraphes »</em>).
         </p>
+
+        {refineError && (
+          <div data-testid="refine-letter-error" role="alert" className="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded text-xs font-mono flex items-center space-x-1.5">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+            <span>{refineError}</span>
+          </div>
+        )}
 
         <form onSubmit={handleRefineSubmit} className="flex gap-2">
           <input
@@ -355,7 +375,7 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
         </form>
       </div>
 
-      {/* Cold Email & LinkedIn Pitch Section (Positionné et maintenu affiché au-dessous de la réponse) */}
+      {/* Cold Email & LinkedIn Pitch Section */}
       <div className="space-y-3 no-print pt-2">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-mono font-bold text-swiss-black uppercase tracking-wider flex items-center space-x-1.5">
@@ -371,7 +391,7 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
           <div className="swiss-card p-6 text-center space-y-2 bg-white">
             <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-swiss-blue border-t-transparent" />
             <p className="text-xs font-mono text-swiss-muted">
-              Génération du Cold Email percutant et de l'accroche LinkedIn (&lt;300 car.) par Gemini...
+              Génération du Cold Email percutant et de l&apos;accroche LinkedIn (&lt;300 car.) par Gemini...
             </p>
           </div>
         )}
@@ -382,7 +402,7 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
               <div className="flex items-center justify-between border-b border-swiss-neutral pb-2">
                 <span className="font-mono text-xs font-bold text-swiss-black flex items-center space-x-1.5">
                   <Mail className="w-3.5 h-3.5 text-swiss-blue" />
-                  <span>PITCH EMAIL D'ACCOMPAGNEMENT</span>
+                  <span>PITCH EMAIL D&apos;ACCOMPAGNEMENT</span>
                 </span>
                 <button
                   onClick={handleCopyEmail}
@@ -424,7 +444,79 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
           </div>
         )}
       </div>
+
+      {/* Technical Interview Simulator Modal */}
+      {isQuestionsOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 no-print">
+          <div className="bg-white rounded-swiss max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col border border-swiss-border">
+            <div className="flex items-start justify-between border-b border-swiss-neutral pb-3">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <HelpCircle className="w-4 h-4 text-swiss-blue" />
+                  <h3 className="text-base font-bold font-sans text-swiss-black">
+                    Simulateur d&apos;Entretien Technique — {job.company}
+                  </h3>
+                </div>
+                <p className="text-xs text-swiss-muted font-sans mt-0.5">
+                  Questions probables dérivées des exigences de l&apos;offre « {job.title} » et de votre profil.
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenQuestions(true)}
+                  disabled={loadingQuestions}
+                  className="px-2.5 py-1 text-xs font-mono border border-swiss-border rounded-swiss hover:bg-swiss-neutral flex items-center space-x-1 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${loadingQuestions ? "animate-spin" : ""}`} />
+                  <span>Régénérer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsQuestionsOpen(false)}
+                  className="text-swiss-muted hover:text-swiss-black text-xs font-mono px-2 py-1"
+                >
+                  ✕ Fermer
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {loadingQuestions ? (
+                <div className="py-12 text-center space-y-2">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-swiss-blue border-t-transparent" />
+                  <p className="text-xs font-mono text-swiss-muted">
+                    Génération des 5 questions techniques et grilles de réponse...
+                  </p>
+                </div>
+              ) : questions.length === 0 ? (
+                <div className="py-8 text-center text-xs text-swiss-muted font-mono">
+                  Aucune question disponible pour le moment.
+                </div>
+              ) : (
+                questions.map((q, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-swiss border border-swiss-border bg-swiss-neutral/20 space-y-2"
+                  >
+                    <div className="text-xs font-mono font-bold text-swiss-blue">
+                      QUESTION 0{idx + 1} // {q.question}
+                    </div>
+                    <div className="text-xs font-sans text-swiss-black leading-relaxed">
+                      <span className="font-mono font-semibold text-emerald-800">Axe de réponse attendu : </span>
+                      {q.expected_answer}
+                    </div>
+                    <div className="text-[11px] font-sans text-swiss-muted italic border-t border-swiss-neutral pt-1.5">
+                      <span className="font-mono not-italic font-semibold text-amber-800">Conseil recruteur : </span>
+                      {q.tip}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

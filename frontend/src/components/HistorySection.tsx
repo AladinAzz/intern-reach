@@ -88,9 +88,9 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
 
   // Safe external URL resolver
   const getSafeUrl = (url?: string, queryHint?: string) => {
-    if (url && url !== "nan" && url.startsWith("http")) return url;
+    if (url && url !== "nan" && /^https?:\/\//i.test(url)) return url;
     return `https://www.google.com/search?q=${encodeURIComponent(
-      queryHint || "stage systemes embarques"
+      queryHint || "stage ingenieur"
     )}`;
   };
 

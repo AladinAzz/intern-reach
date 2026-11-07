@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { UserProfile } from "@/types";
-import { UploadCloud, CheckCircle2, Plus, Trash2, Save, FileText, Code2, GraduationCap } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertCircle, Plus, Trash2, Save, FileText, Code2, GraduationCap, Compass } from "lucide-react";
 
 interface CvSectionProps {
   profile: UserProfile;
@@ -19,8 +19,10 @@ export const CvSection: React.FC<CvSectionProps> = ({
 }) => {
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [newSkill, setNewSkill] = useState("");
+  const [newDomain, setNewDomain] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
   // Synchronize internal form state whenever profile prop updates (e.g. after CV upload)
@@ -31,36 +33,70 @@ export const CvSection: React.FC<CvSectionProps> = ({
   }, [profile]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setFileName(file.name);
-      try {
-        await onUploadFile(file);
-        setUploadSuccess(true);
-        setTimeout(() => setUploadSuccess(false), 6000);
-      } catch (err) {
-        console.error("Upload error:", err);
-      }
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setFileName(file.name);
+    setUploadError(null);
+    setUploadSuccess(false);
+    try {
+      await onUploadFile(file);
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 6000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'analyse du CV.";
+      setUploadError(msg);
     }
   };
 
-  const handleAddSkill = () => {
-    if (newSkill.trim() && !formData.technical_skills.includes(newSkill.trim())) {
-      const updated = {
+  const handleAddDomain = () => {
+    const clean = newDomain.trim();
+    if (clean && !formData.target_domains.includes(clean)) {
+      setFormData({
         ...formData,
-        technical_skills: [...formData.technical_skills, newSkill.trim()],
-      };
-      setFormData(updated);
+        target_domains: [...formData.target_domains, clean],
+      });
+      setNewDomain("");
+    }
+  };
+
+  const handleRemoveDomain = (domainToRemove: string) => {
+    setFormData({
+      ...formData,
+      target_domains: formData.target_domains.filter((d) => d !== domainToRemove),
+    });
+  };
+
+  const handleAddSkill = () => {
+    const clean = newSkill.trim();
+    if (clean && !formData.technical_skills.includes(clean)) {
+      setFormData({
+        ...formData,
+        technical_skills: [...formData.technical_skills, clean],
+      });
       setNewSkill("");
     }
   };
 
   const handleRemoveSkill = (skillToRemove: string) => {
-    const updated = {
+    setFormData({
       ...formData,
       technical_skills: formData.technical_skills.filter((s) => s !== skillToRemove),
-    };
-    setFormData(updated);
+    });
+  };
+
+  const handleAddProject = () => {
+    setFormData({
+      ...formData,
+      key_projects: [...formData.key_projects, { title: "", desc: "" }],
+    });
+  };
+
+  const handleRemoveProject = (index: number) => {
+    setFormData({
+      ...formData,
+      key_projects: formData.key_projects.filter((_, idx) => idx !== index),
+    });
   };
 
   const handleSave = () => {
@@ -78,7 +114,7 @@ export const CvSection: React.FC<CvSectionProps> = ({
           Téléverser votre CV (PDF ou Texte)
         </h3>
         <p className="text-xs text-swiss-muted font-sans mt-1 max-w-lg mx-auto">
-          L'agent extrait automatiquement vos compétences clés, votre formation et vos projets en systèmes embarqués, traitement du signal et vision.
+          L&apos;agent extrait automatiquement vos spécialités cibles, vos compétences techniques, votre formation et vos projets scientifiques.
         </p>
         <div className="mt-4 flex flex-col items-center gap-2">
           <label className={`inline-flex items-center space-x-2 px-4 py-2 ${uploading ? "bg-slate-400 cursor-not-allowed" : "bg-swiss-blue hover:bg-swiss-blue-hover cursor-pointer"} text-white text-xs font-mono font-semibold rounded-swiss transition-colors shadow-sm`}>
@@ -94,9 +130,16 @@ export const CvSection: React.FC<CvSectionProps> = ({
           </label>
 
           {uploadSuccess && (
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded font-mono text-xs mt-1 animate-fade-in">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded font-mono text-xs mt-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
               <span>{fileName || "CV"} analysé avec succès ! Profil et compétences actualisés.</span>
+            </div>
+          )}
+
+          {uploadError && (
+            <div data-testid="cv-upload-error" role="alert" className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-50 text-rose-800 border border-rose-200 rounded font-mono text-xs mt-1">
+              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              <span>{uploadError}</span>
             </div>
           )}
         </div>
@@ -111,7 +154,7 @@ export const CvSection: React.FC<CvSectionProps> = ({
               <span>Profil Candidat & Compétences Scientifiques</span>
             </h2>
             <p className="text-xs text-swiss-muted font-sans mt-0.5">
-              Ces données servent de socle objectif pour argumenter chaque paragraphe de la lettre de motivation.
+              Ces données pilotent vos requêtes de recherche et servent de socle objectif pour chaque lettre de motivation.
             </p>
           </div>
           <button
@@ -170,6 +213,59 @@ export const CvSection: React.FC<CvSectionProps> = ({
           </div>
         </div>
 
+        {/* Target Domains Tag Manager */}
+        <div className="space-y-3 pt-4 border-t border-swiss-neutral">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono text-swiss-muted uppercase flex items-center space-x-1.5">
+              <Compass className="w-3.5 h-3.5 text-swiss-blue" />
+              <span>Spécialités & Domaines Cibles ({formData.target_domains.length})</span>
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {formData.target_domains.map((domain) => (
+              <span
+                key={domain}
+                className="inline-flex items-center space-x-1 text-xs font-mono bg-blue-50 px-2.5 py-1 rounded border border-blue-200 text-swiss-blue"
+              >
+                <span>{domain}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveDomain(domain)}
+                  className="text-swiss-muted hover:text-red-700 ml-1"
+                  aria-label={`Supprimer le domaine ${domain}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
+          <div className="flex items-center space-x-2 pt-1 max-w-md">
+            <input
+              type="text"
+              value={newDomain}
+              onChange={(e) => setNewDomain(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddDomain();
+                }
+              }}
+              placeholder="Ajouter une spécialité cible (ex: Edge AI, Robotique)..."
+              className="flex-1 px-3 py-1.5 text-xs border border-swiss-border rounded-swiss outline-none focus:border-swiss-blue font-sans"
+            />
+            <button
+              type="button"
+              onClick={handleAddDomain}
+              className="px-3 py-1.5 bg-swiss-neutral hover:bg-swiss-blue hover:text-white text-xs font-mono font-medium rounded-swiss border border-swiss-border transition-colors flex items-center space-x-1"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Ajouter</span>
+            </button>
+          </div>
+        </div>
+
         {/* Technical Skills Tag Manager */}
         <div className="space-y-3 pt-4 border-t border-swiss-neutral">
           <div className="flex items-center justify-between">
@@ -190,6 +286,7 @@ export const CvSection: React.FC<CvSectionProps> = ({
                   type="button"
                   onClick={() => handleRemoveSkill(skill)}
                   className="text-swiss-muted hover:text-red-700 ml-1"
+                  aria-label={`Supprimer la compétence ${skill}`}
                 >
                   ×
                 </button>
@@ -224,31 +321,53 @@ export const CvSection: React.FC<CvSectionProps> = ({
 
         {/* Key Projects */}
         <div className="space-y-3 pt-4 border-t border-swiss-neutral">
-          <label className="text-xs font-mono text-swiss-muted uppercase flex items-center space-x-1.5">
-            <FileText className="w-3.5 h-3.5 text-swiss-blue" />
-            <span>Projets Clés Réalisés (Utilisés comme preuves tangibles)</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono text-swiss-muted uppercase flex items-center space-x-1.5">
+              <FileText className="w-3.5 h-3.5 text-swiss-blue" />
+              <span>Projets Clés Réalisés ({formData.key_projects.length})</span>
+            </label>
+            <button
+              type="button"
+              onClick={handleAddProject}
+              className="px-2.5 py-1 bg-swiss-neutral hover:bg-swiss-blue hover:text-white text-xs font-mono font-medium rounded-swiss border border-swiss-border transition-colors flex items-center space-x-1"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Ajouter un projet</span>
+            </button>
+          </div>
 
           <div className="space-y-3">
             {formData.key_projects.map((proj, idx) => (
               <div key={idx} className="p-3 bg-swiss-neutral/30 border border-swiss-border rounded space-y-1.5">
-                <input
-                  type="text"
-                  value={proj.title}
-                  onChange={(e) => {
-                    const updated = [...formData.key_projects];
-                    updated[idx].title = e.target.value;
-                    setFormData({ ...formData, key_projects: updated });
-                  }}
-                  className="w-full text-xs font-bold font-sans text-swiss-black bg-transparent border-b border-swiss-border/60 pb-1 outline-none focus:border-swiss-blue"
-                  placeholder="Titre du projet..."
-                />
+                <div className="flex items-center justify-between gap-2">
+                  <input
+                    type="text"
+                    value={proj.title}
+                    onChange={(e) => {
+                      const updated = formData.key_projects.map((item, i) =>
+                        i === idx ? { ...item, title: e.target.value } : item
+                      );
+                      setFormData({ ...formData, key_projects: updated });
+                    }}
+                    className="flex-1 text-xs font-bold font-sans text-swiss-black bg-transparent border-b border-swiss-border/60 pb-1 outline-none focus:border-swiss-blue"
+                    placeholder="Titre du projet..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveProject(idx)}
+                    className="text-swiss-muted hover:text-rose-600 p-1"
+                    title="Supprimer ce projet"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <textarea
                   value={proj.desc}
                   rows={2}
                   onChange={(e) => {
-                    const updated = [...formData.key_projects];
-                    updated[idx].desc = e.target.value;
+                    const updated = formData.key_projects.map((item, i) =>
+                      i === idx ? { ...item, desc: e.target.value } : item
+                    );
                     setFormData({ ...formData, key_projects: updated });
                   }}
                   className="w-full text-xs font-sans text-swiss-black/80 bg-transparent outline-none focus:border-swiss-blue resize-none"
@@ -262,4 +381,3 @@ export const CvSection: React.FC<CvSectionProps> = ({
     </div>
   );
 };
-
