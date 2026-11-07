@@ -1,0 +1,45 @@
+# InternReach (Scientific Internship & Application Studio)
+> Full-stack SaaS platform for scientific & embedded systems internship discovery, AI-driven motivation letter generation (3 variants), and candidate pipeline management.
+
+## Core Architecture & Files
+- [backend/main.py]: FastAPI entry point with CORS, lifespan startup worker, and router mounts.
+- [backend/app/routers/search.py]: Dynamic multi-source search and manual job import endpoints.
+- [backend/app/routers/cv.py]: CV file upload (10 MB limit) and structured candidate profile persistence.
+- [backend/app/routers/letters.py]: 3-variant motivation letter generator, refinement loop, ATS gap analysis, and interview preparation.
+- [backend/app/routers/history.py]: Candidate application tracking CRM (status updates, deletion, full history).
+- [backend/app/routers/worker.py]: Autonomous ingestion and asynchronous HTTP HEAD liveness verification supervisor.
+- [backend/app/routers/settings.py]: BYOK API key configuration with safe masked egress.
+- [backend/app/services/agent_reach.py]: Aggregates live JobSpy scraping, DDGS web search, and ATS matching algorithms.
+- [backend/app/services/registries.py]: Dynamic query generators and direct web scraping probes for French R&D job boards.
+- [backend/app/services/worker.py]: Background thread worker performing scheduled sync and liveness verification sweeps.
+- [backend/app/services/cv_parser.py]: Hybrid AI (Gemini/OpenAI/Claude) and regex parser for multi-column academic resumes.
+- [backend/app/services/letter_generator.py]: LLM prompt engineering for Scientific R&D, Tech Agile, and Industrial Corporate cover letters.
+- [backend/app/services/storage.py]: Local JSON-based persistence (`profile.json`, `history.json`, `stored_jobs.json`, `settings.json`).
+- [frontend/src/app/page.tsx]: Main Next.js tab controller and dynamic component orchestrator.
+- [frontend/src/components/SearchSection.tsx]: Dynamic search UI with domain filters, liveness toggle, and import modal.
+- [frontend/src/components/CvSection.tsx]: Drag-and-drop CV upload with real-time profile form synchronization.
+- [frontend/src/components/LetterStudio.tsx]: 3-version letter display, copy actions, and iterative feedback refinement loop.
+- [frontend/src/components/HistorySection.tsx]: Candidate CRM table with interactive status dropdowns, letter modals, and delete actions.
+- [frontend/src/components/SettingsModal.tsx]: BYOK modal, LLM provider selection, and worker trigger controls.
+- [docs/API.md]: Comprehensive REST API documentation for all endpoints.
+- [docs/ARCHITECTURE.md]: High-level architecture, Mermaid sequence diagrams, and design system contracts.
+
+## Key Concepts
+
+### Dynamic Ingestion & Anti-Bot Bypassing
+InternReach does NOT use static JSON registries. It uses unauthenticated mobile REST API scraping (`JobSpy`) to query Indeed, LinkedIn, and Glassdoor without triggering browser-based Cloudflare interstitials, combined with live localized web queries (`ddgs`) targeting French defense, aerospace, and deep-tech portals (CEA, Inria, Thales, Safran, Welcome to the Jungle, Apec).
+
+### Liveness Verification Loop
+Job listings decay rapidly. The background worker uses asynchronous HTTP `HEAD` probes with concurrency limits (5 concurrent tasks) to flag 404 or dead pages with `is_active: false`. The frontend allows users to hide inactive listings with a single toggle.
+
+### 3-Tier Scientific Letter Personalization
+Generic motivation letters fail in scientific recruitment. InternReach generates 3 distinct angles for every offer:
+1. `scientific`: Focuses on research methodology, academic publications, state-of-the-art literature, and experimental rigor (adapted for CEA, Inria, CNRS).
+2. `startup`: Emphasizes pragmatism, rapid prototyping, clean code, and cross-functional autonomy (adapted for robotics and deep-tech scale-ups).
+3. `industrial`: Emphasizes system reliability, quality assurance, safety-critical norms (ISO 26262, DO-178C), and V-cycle engineering (adapted for Thales, Airbus, Safran).
+
+### Privacy & Bring Your Own Key (BYOK)
+No user data, resumes, or keys are hosted on external servers. All data is saved locally in `backend/app/data/`. All LLM keys (Gemini, OpenAI, Claude) are masked in responses and never exposed to client-side telemetry.
+
+### Swiss Scientific Design System
+The UI adheres strictly to the International Typographic Style: ultra-clean high-contrast typography (`JetBrains Mono` and `Inter`), clinical background (`#F8F9FA`), cobalt blue accent (`#0047AB`), and zero decorative emojis in production controls.
