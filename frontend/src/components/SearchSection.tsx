@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { JobOffer } from "@/types";
-import { Search, MapPin, ExternalLink, Sparkles, Building2, Layers, CheckCircle2, Link2, PlusCircle, FileText, Calendar, Clock, ArrowUpDown } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { JobOffer, UserProfile } from "@/types";
+import { Search, MapPin, ExternalLink, Sparkles, Building2, Layers, CheckCircle2, Link2, PlusCircle, FileText, Calendar, Clock, ArrowUpDown, RefreshCw, UserCheck } from "lucide-react";
 import { importOffer } from "@/lib/api";
 
 const formatDateFrench = (dateStr?: string) => {
@@ -34,22 +34,44 @@ const isRecentOffer = (dateStr?: string) => {
 interface SearchSectionProps {
   offers: JobOffer[];
   loading: boolean;
+  profile?: UserProfile;
   onSearch: (query: string, location: string) => void;
   onSelectForLetter: (job: JobOffer) => void;
   onAddCustomOffer?: (job: JobOffer) => void;
+  onGoToCvTab?: () => void;
 }
 
 export const SearchSection: React.FC<SearchSectionProps> = ({
   offers,
   loading,
+  profile,
   onSearch,
   onSelectForLetter,
   onAddCustomOffer,
+  onGoToCvTab,
 }) => {
-  const [query, setQuery] = useState("Systèmes embarqués, Edge AI, Traitement du signal");
+  // Compute default search query dynamically from candidate's CV profile
+  const defaultCvQuery = useMemo(() => {
+    if (profile?.target_domains && profile.target_domains.length > 0) {
+      return profile.target_domains.slice(0, 3).join(", ");
+    }
+    if (profile?.technical_skills && profile.technical_skills.length > 0) {
+      return profile.technical_skills.slice(0, 4).join(", ");
+    }
+    return "";
+  }, [profile]);
+
+  const [query, setQuery] = useState(defaultCvQuery);
   const [location, setLocation] = useState("");
   const [sortBy, setSortBy] = useState<"novelty" | "match">("novelty");
   const [hideExpired, setHideExpired] = useState(false);
+
+  // Synchronize search query whenever profile is loaded or updated
+  useEffect(() => {
+    if (defaultCvQuery && (!query || query === "Systèmes embarqués, Edge AI, Traitement du signal")) {
+      setQuery(defaultCvQuery);
+    }
+  }, [defaultCvQuery]);
 
   const expiredCount = useMemo(() => {
     return offers.filter((j) => j.is_active === false).length;
@@ -96,15 +118,33 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
     }
   };
 
-  const domainFilters = [
-    "Tous",
-    "Systèmes Embarqués",
-    "Edge AI & TinyML",
-    "Traitement du Signal",
-    "Computer Vision & SLAM",
-    "FPGA & DSP",
-    "Robotique & ROS 2",
-  ];
+  // Dynamically extract specialty filters strictly from candidate's CV profile
+  const domainFilters = useMemo(() => {
+    const filters = ["Tous"];
+    const seen = new Set<string>(["tous"]);
+
+    if (profile?.target_domains && Array.isArray(profile.target_domains)) {
+      profile.target_domains.forEach((d) => {
+        const clean = d.trim();
+        if (clean && !seen.has(clean.toLowerCase())) {
+          seen.add(clean.toLowerCase());
+          filters.push(clean);
+        }
+      });
+    }
+
+    if (profile?.technical_skills && Array.isArray(profile.technical_skills)) {
+      profile.technical_skills.forEach((s) => {
+        const clean = s.trim();
+        if (clean && !seen.has(clean.toLowerCase()) && filters.length < 9) {
+          seen.add(clean.toLowerCase());
+          filters.push(clean);
+        }
+      });
+    }
+
+    return filters;
+  }, [profile]);
 
   const locationPills = [
     { label: "Toute la France", val: "" },
@@ -119,8 +159,8 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
 
   const handleFilterClick = (filter: string) => {
     if (filter === "Tous") {
-      setQuery("");
-      onSearch("", location);
+      setQuery(defaultCvQuery);
+      onSearch(defaultCvQuery, location);
     } else {
       setQuery(filter);
       onSearch(filter, location);
@@ -143,16 +183,37 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
       <div className="swiss-card p-6">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-4">
           <div className="md:col-span-6 space-y-1">
-            <label className="text-xs font-mono font-medium text-swiss-muted uppercase tracking-wider">
-              Mots-clés & Spécialités
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-mono font-medium text-swiss-muted uppercase tracking-wider flex items-center space-x-1.5">
+                <span>Mots-clés & Spécialités</span>
+                {profile?.full_name && (
+                  <span className="inline-flex items-center space-x-1 text-[10px] text-swiss-blue bg-blue-50 border border-swiss-blue/20 px-1.5 py-0.5 rounded font-mono normal-case">
+                    <UserCheck className="w-3 h-3 text-swiss-blue" />
+                    <span>CV : {profile.full_name}</span>
+                  </span>
+                )}
+              </label>
+              {defaultCvQuery && query !== defaultCvQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery(defaultCvQuery);
+                    onSearch(defaultCvQuery, location);
+                  }}
+                  className="text-[10px] font-mono text-swiss-blue hover:underline flex items-center space-x-1"
+                >
+                  <RefreshCw className="w-2.5 h-2.5" />
+                  <span>Rétablir mots-clés du CV</span>
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-3 text-swiss-muted" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ex: Edge AI, C++, PyTorch, Radar, Vision, FPGA..."
+                placeholder={defaultCvQuery || "Saisissez vos mots-clés ou importez votre CV..."}
                 className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-swiss-border rounded-swiss focus:border-swiss-blue focus:ring-1 focus:ring-swiss-blue outline-none"
               />
             </div>
@@ -189,24 +250,43 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         {/* Quick Filter Badges - Domains & Locations */}
         <div className="mt-4 pt-4 border-t border-swiss-neutral space-y-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-mono text-swiss-muted mr-1">Spécialités :</span>
-            {domainFilters.map((f) => {
-              const active = query === f || (f === "Tous" && !query);
-              return (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => handleFilterClick(f)}
-                  className={`px-2.5 py-1 text-xs font-mono rounded transition-colors ${
-                    active
-                      ? "bg-swiss-blue text-white font-semibold"
-                      : "bg-swiss-neutral/70 hover:bg-swiss-neutral text-swiss-black"
-                  }`}
-                >
-                  {f}
-                </button>
-              );
-            })}
+            <span className="text-[11px] font-mono text-swiss-muted mr-1">
+              Spécialités de votre CV :
+            </span>
+            {domainFilters.length > 1 ? (
+              domainFilters.map((f) => {
+                const active = query === f || (f === "Tous" && (!query || query === defaultCvQuery));
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => handleFilterClick(f)}
+                    className={`px-2.5 py-1 text-xs font-mono rounded transition-colors ${
+                      active
+                        ? "bg-swiss-blue text-white font-semibold"
+                        : "bg-swiss-neutral/70 hover:bg-swiss-neutral text-swiss-black"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-swiss-muted italic">
+                  Aucune spécialité détectée dans le profil.
+                </span>
+                {onGoToCvTab && (
+                  <button
+                    type="button"
+                    onClick={onGoToCvTab}
+                    className="text-xs font-mono text-swiss-blue hover:underline font-semibold"
+                  >
+                    Importer mon CV →
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-swiss-neutral/60">

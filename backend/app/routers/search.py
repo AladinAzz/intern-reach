@@ -16,15 +16,29 @@ class ImportOfferRequest(BaseModel):
 
 @router.post("")
 async def search_internships(req: SearchRequest):
+    query = (req.query or "").strip()
+    
+    # If no query passed, dynamically derive keywords & specialties from stored CV profile
+    if not query:
+        from app.services.storage import load_profile
+        profile = load_profile()
+        target_domains = profile.get("target_domains", [])
+        technical_skills = profile.get("technical_skills", [])
+        
+        if target_domains:
+            query = ", ".join(target_domains[:3])
+        elif technical_skills:
+            query = ", ".join(technical_skills[:4])
+
     results = await agent_reach_service.search_internships_async(
-        query=req.query or "",
+        query=query,
         location=req.location or ""
     )
     return {
         "status": "success",
         "total": len(results),
         "location": req.location or "Toutes régions",
-        "query": req.query or "Tous domaines",
+        "query": query or "Mots-clés CV",
         "results": results
     }
 

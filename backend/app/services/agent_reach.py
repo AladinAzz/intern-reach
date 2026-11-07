@@ -2,7 +2,9 @@ import json
 import subprocess
 import shutil
 import httpx
+import re
 from typing import List, Dict, Any
+from app.services.storage import load_profile, upsert_stored_jobs, load_stored_jobs
 
 # Curated authentic real-world Paris & Île-de-France Tech Internship base (Embedded, Signal, Vision, Edge AI)
 CURATED_OFFERS = [
@@ -117,7 +119,17 @@ def extract_tech_tags(text: str) -> List[str]:
         pattern = r"(?:^|[^\w])" + escaped + r"(?:[^\w]|$)"
         if re.search(pattern, text_upper):
             found.append(kw)
-    return found[:6] or ["Ingénierie", "Systèmes Embarqués", "C++", "Python"]
+    if found:
+        return found[:6]
+    try:
+        from app.services.storage import load_profile
+        prof = load_profile()
+        cv_skills = prof.get("technical_skills", [])
+        if cv_skills:
+            return cv_skills[:4]
+    except Exception:
+        pass
+    return ["Ingénierie", "R&D"]
 
 def calculate_ats_affinity(offer: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
     skills = profile.get("technical_skills", [])
@@ -277,10 +289,15 @@ class AgentReachService:
         # 2. Gemini deep search if live results are sparse (<3 offers)
         if len(results) < 3:
             from app.services.letter_generator import letter_generator
+            prof_cv = load_profile()
+            cv_doms = prof_cv.get("target_domains", [])
+            cv_skls = prof_cv.get("technical_skills", [])
+            active_domain_kw = query or (", ".join(cv_doms[:3]) if cv_doms else (", ".join(cv_skls[:3]) if cv_skls else "Ingénierie & R&D"))
+
             prompt = f"""
 Tu es un moteur de recherche spécialisé en stages d'ingénieur, R&D et technologies.
 Recherche et synthétise 3 opportunités de stage réelles ou représentatives pour les critères stricts suivants :
-- Mots-clés / Domaine : {query or 'Systèmes Embarqués, Edge AI & Signal'}
+- Mots-clés / Domaine : {active_domain_kw}
 - Localisation Cible OBLIGATOIRE : {target_loc or 'France'}
 
 CONSIGNES STRICTES :
@@ -299,7 +316,7 @@ Réponds UNIQUEMENT avec un JSON valide sous la forme d'une liste de 3 objets su
     "company": "Entreprise ou laboratoire réel situé à {target_loc or 'France'}",
     "location": "Ville précise ({target_loc or 'France'})",
     "contract": "Stage conventionné (6 mois) - PFE",
-    "category": "{query or 'Ingénierie & R&D'}",
+    "category": "{active_domain_kw}",
     "tags": ["Compétence1", "Compétence2", "Compétence3", "Compétence4"],
     "match_score": 94,
     "date_posted": "2026-11-07",
@@ -322,8 +339,6 @@ Réponds UNIQUEMENT avec un JSON valide sous la forme d'une liste de 3 objets su
                 print(f"Erreur d'augmentation Gemini: {e}")
 
         # 4. Storage & Deduplication Engine (Persistence in jobs.json)
-        from app.services.storage import upsert_stored_jobs, load_stored_jobs
-        
         # Merge with previously stored jobs matching this search
         stored_pool = load_stored_jobs()
         for sj in stored_pool:

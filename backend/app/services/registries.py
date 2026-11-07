@@ -75,7 +75,17 @@ def extract_tech_tags(text: str) -> List[str]:
         pat = r"(?:^|[^\w])" + re.escape(kw) + r"(?:[^\w]|$)"
         if re.search(pat, text_upper):
             tags.append(kw.title() if kw not in ("C++", "FPGA", "VHDL", "DSP", "ROS 2", "ROS", "ARM", "CAN") else kw)
-    return tags[:5] or ["Systèmes Embarqués", "C++", "R&D"]
+    if tags:
+        return tags[:5]
+    try:
+        from app.services.storage import load_profile
+        prof = load_profile()
+        cv_skills = prof.get("technical_skills", [])
+        if cv_skills:
+            return cv_skills[:4]
+    except Exception:
+        pass
+    return ["R&D", "Ingénierie"]
 
 def parse_company_from_title(title: str, url: str) -> str:
     """Heuristic extraction of company name from search snippet and URL."""
@@ -295,6 +305,20 @@ async def execute_live_search_tools(query: str = "", location: str = "") -> List
     return all_live_offers
 
 # Compatibility alias for existing router/worker calls
-async def fetch_all_registries() -> List[Dict[str, Any]]:
-    """Delegates to live search tools dynamically (no fixed static registries)."""
-    return await execute_live_search_tools("Systèmes Embarqués Edge AI", "France")
+async def fetch_all_registries(query: str = "") -> List[Dict[str, Any]]:
+    """Delegates to live search tools dynamically using profile keywords if query is empty."""
+    if not query:
+        try:
+            from app.services.storage import load_profile
+            p = load_profile()
+            domains = p.get("target_domains", [])
+            skills = p.get("technical_skills", [])
+            if domains:
+                query = ", ".join(domains[:3])
+            elif skills:
+                query = ", ".join(skills[:3])
+            else:
+                query = "Ingénierie & R&D"
+        except Exception:
+            query = "Ingénierie & R&D"
+    return await execute_live_search_tools(query, "France")

@@ -56,18 +56,33 @@ export default function Home() {
     async function init() {
       setLoadingOffers(true);
       try {
-        const [fetchedOffers, fetchedProfile, fetchedHistory, fetchedSettings] =
+        const [fetchedProfile, fetchedHistory, fetchedSettings] =
           await Promise.allSettled([
-            searchInternships("Systèmes embarqués, Edge AI, Traitement du signal", ""),
             getProfile(),
             getHistory(),
             getSettings(),
           ]);
 
-        if (fetchedOffers.status === "fulfilled") setOffers(fetchedOffers.value);
-        if (fetchedProfile.status === "fulfilled") setProfile(fetchedProfile.value);
+        let loadedProfile: UserProfile | null = null;
+        if (fetchedProfile.status === "fulfilled") {
+          loadedProfile = fetchedProfile.value;
+          setProfile(fetchedProfile.value);
+        }
         if (fetchedHistory.status === "fulfilled") setHistory(fetchedHistory.value);
         if (fetchedSettings.status === "fulfilled") setSettings(fetchedSettings.value);
+
+        // Derive initial search query dynamically from the candidate's CV profile
+        let initialQuery = "";
+        if (loadedProfile?.target_domains && loadedProfile.target_domains.length > 0) {
+          initialQuery = loadedProfile.target_domains.slice(0, 3).join(", ");
+        } else if (loadedProfile?.technical_skills && loadedProfile.technical_skills.length > 0) {
+          initialQuery = loadedProfile.technical_skills.slice(0, 4).join(", ");
+        }
+
+        const initialOffers = await searchInternships(initialQuery, "");
+        setOffers(initialOffers);
+      } catch (err) {
+        console.error("Init error:", err);
       } finally {
         setLoadingOffers(false);
       }
@@ -107,6 +122,17 @@ export default function Home() {
     try {
       const updated = await uploadCvFile(file);
       setProfile(updated);
+
+      // Immediately refresh search offers using the newly extracted CV specialties
+      let cvQuery = "";
+      if (updated.target_domains && updated.target_domains.length > 0) {
+        cvQuery = updated.target_domains.slice(0, 3).join(", ");
+      } else if (updated.technical_skills && updated.technical_skills.length > 0) {
+        cvQuery = updated.technical_skills.slice(0, 4).join(", ");
+      }
+      if (cvQuery) {
+        await handleSearch(cvQuery, "");
+      }
     } finally {
       setUploadingCv(false);
     }
@@ -157,9 +183,11 @@ export default function Home() {
           <SearchSection
             offers={offers}
             loading={loadingOffers}
+            profile={profile}
             onSearch={handleSearch}
             onSelectForLetter={handleSelectForLetter}
             onAddCustomOffer={(newOffer) => setOffers((prev) => [newOffer, ...prev])}
+            onGoToCvTab={() => setActiveTab("cv")}
           />
         )}
 
@@ -205,7 +233,12 @@ export default function Home() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onSave={handleSaveSettings}
-        onSyncCompleted={() => handleSearch("Systèmes embarqués, Edge AI, Traitement du signal", "")}
+        onSyncCompleted={() => {
+          const cvQ = profile.target_domains?.length
+            ? profile.target_domains.slice(0, 3).join(", ")
+            : (profile.technical_skills?.slice(0, 4).join(", ") || "");
+          handleSearch(cvQ, "");
+        }}
       />
     </div>
   );

@@ -112,8 +112,13 @@ class IngestionWorker:
         save_worker_state(state)
 
         try:
-            # 1. Ingest from open-source GitHub registries
-            registry_offers = await fetch_all_registries()
+            # 1. Ingest dynamically using candidate's CV profile keywords & specialties
+            from app.services.storage import load_profile
+            cv_prof = load_profile()
+            cv_domains = cv_prof.get("target_domains", [])
+            cv_skills = cv_prof.get("technical_skills", [])
+            worker_query = ", ".join(cv_domains[:3]) if cv_domains else (", ".join(cv_skills[:3]) if cv_skills else "Ingénierie & R&D")
+            registry_offers = await fetch_all_registries(query=worker_query)
 
             # 2. Ingest existing stored jobs
             current_stored = load_stored_jobs()
