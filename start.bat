@@ -1,22 +1,23 @@
 @echo off
-title Launching InternReach (Swiss Scientific Internship Platform)
+title InternReach - Plateforme Scientifique de Recherche de Stage
+
 echo ============================================================
-echo   InternReach — Swiss Scientific Internship Engine
-echo   Systèmes Embarqués, IA & Traitement de l'Information
+echo   InternReach - Swiss Scientific Internship Engine
+echo   Systemes Embarques, IA et Traitement du Signal
 echo ============================================================
 echo.
 
-echo [1/2] Starting Python FastAPI Backend on port 8008...
+echo [1/2] Lancement du Backend FastAPI sur http://127.0.0.1:8008...
 start "InternReach Backend (FastAPI)" cmd /k "cd /d %~dp0backend && venv\Scripts\python.exe main.py"
 
-echo [2/2] Starting Next.js Frontend on port 3005...
+echo [2/2] Lancement du Frontend Next.js sur http://localhost:3005...
 start "InternReach Frontend (Next.js)" cmd /k "cd /d %~dp0frontend && npx.cmd pnpm dev"
 
 echo.
 echo ============================================================
-echo  Backend API:  http://localhost:8008/docs
-echo  Frontend UI:  http://localhost:3005
+echo   Backend API : http://127.0.0.1:8008/docs
+echo   Frontend UI : http://localhost:3005
 echo ============================================================
-echo App is opening in your default browser...
-timeout /t 3 >nul
+echo Ouverture automatique dans votre navigateur par defaut...
+ping -n 4 127.0.0.1 >nul
 start http://localhost:3005
