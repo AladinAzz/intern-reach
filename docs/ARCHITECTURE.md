@@ -23,16 +23,16 @@ flowchart TD
         API["FastAPI REST Gateway"]
         AgentReach["Agent Reach Search Service"]
         Worker["Autonomous Ingestion Worker"]
-        CVParser["AI CV Parser (Gemini / Regex)"]
+        CVParser["AI CV Parser (Gemini / Claude / Regex)"]
         LetterGen["Multi-Variant Letter Generator"]
-        Storage["Atomic JSON Storage Engine"]
+        Storage["Atomic JSON Storage Engine (STORE_LOCK)"]
     end
 
     subgraph Ingestion["Dynamic Ingestion Primitives"]
         JobSpy["JobSpy Scraper (Indeed, LinkedIn, Glassdoor)"]
         DDGS["Live DDGS Search Engine (Welcometothejungle, Apec, HelloWork)"]
         PortalProbe["Direct R&D Portals (Thales, CEA, Safran, Inria)"]
-        Liveness["Async HTTP HEAD Prober"]
+        Liveness["Tri-State HTTP HEAD/GET Prober"]
     end
 
     subgraph LLM["Inference Providers (BYOK)"]
@@ -68,15 +68,15 @@ InternReach eliminates static registries in favor of live multi-source scraping 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Diner as Candidate
+    actor Candidate as Candidate
     participant UI as Next.js 14 Frontend
     participant API as FastAPI Gateway
     participant Reach as AgentReach Service
     participant JobSpy as JobSpy Engine
     participant DDGS as DDGS Web Engine
-    participant Storage as Local JSON Store
+    participant Storage as Local JSON Store (Atomic)
 
-    Diner->>UI: Selects domain ("Systèmes Embarqués") & clicks Search
+    Candidate->>UI: Selects domain ("Systèmes Embarqués") or clicks "POPULER AVEC L'IA"
     UI->>API: POST /api/search {query, location}
     API->>Reach: search_internships_async()
     
@@ -88,78 +88,99 @@ sequenceDiagram
         DDGS-->>Reach: Extracted live postings
     end
 
-    Reach->>Storage: upsert_stored_jobs() (Deduplicate via MD5 / Canonical URL)
+    Reach->>Storage: upsert_stored_jobs() (Deduplicate via Canonical URL & SHA-1 ID)
     Reach->>Reach: Calculate ATS matching score against Candidate Profile
     Reach-->>API: Filtered, enriched, and sorted job offers
     API-->>UI: JSON {status: "success", total: N, results: [...]}
-    UI-->>Diner: Renders high-density Swiss Scientific cards
+    UI-->>Candidate: Renders high-density Swiss Scientific cards
 ```
 
 ---
 
 ## 3. Autonomous Ingestion Worker & Liveness Loop
 
-To prevent candidates from applying to expired job offers (HTTP 404 or closed career boards), the background worker performs asynchronous HEAD/GET probes and marks inactive postings.
-
-```mermaid
-flowchart LR
-    A["Scheduled Trigger (Every 6h)"] --> B["Trigger Multi-Source Scrape"]
-    B --> C["Deduplicate & Index New Jobs"]
-    C --> D["Extract All Tracked URLs"]
-    D --> E["Async HTTP HEAD Sweep (Concurrency = 5)"]
-    E --> F{"Response Code"}
-    F -->|200 / 301 / 302| G["Mark Active: is_active = True"]
-    F -->|404 / 410 / Closed| H["Mark Inactive: is_active = False"]
-    G --> I["Persist to storage.py"]
-    H --> I
-    I --> J["Update Worker Metrics State"]
-```
-
----
-
-## 4. Multi-Variant Motivation Letter Generation Pipeline
-
-The letter generation engine analyzes the semantic gap between the candidate's CV and the recruiter's specifications, producing three distinct variants:
+The background ingestion worker runs on a configurable cadence (default: every 6 hours) to discover new postings and verify the liveness of stored listings without false positives:
 
 ```mermaid
 flowchart TD
-    Job["Target Job Offer (Title, Company, Description)"] --> Context["Context Merger"]
-    CV["Candidate Profile (Skills, Projects, Education)"] --> Context
+    Start["Worker Cycle Triggered (Cron / Manual POST /api/worker/trigger)"] --> ReadConfig["Load worker_settings.json"]
+    ReadConfig --> IngestionStep["Ingestion Step: Query Live Tools (CV-derived terms)"]
+    IngestionStep --> Deduplicate["Deduplicate & Upsert New Offers (stable_job_id)"]
+    Deduplicate --> LivenessCheck{"Auto Liveness Enabled?"}
     
-    Context --> Gap["ATS Gap Analysis & Pitch Synthesizer"]
+    LivenessCheck -- Yes --> BatchSelection["Select Oldest 40 Checked Jobs"]
+    BatchSelection --> ProbeHTTP["Async Probing (HEAD + GET fallback, Concurrency: 8)"]
+    ProbeHTTP --> EvalVerdict{"HTTP Status Evaluation"}
     
-    Gap --> V1["Variant 1: R&D / Scientifique\n(Methodology, State-of-the-Art, Lab Rigor)"]
-    Gap --> V2["Variant 2: Tech Agile / Startup\n(Pragmatism, Fast Iteration, Clean Code)"]
-    Gap --> V3["Variant 3: Grand Groupe Industriel\n(Safety-Critical Standards, DO-178C, ISO 26262)"]
+    EvalVerdict -- "2xx / 3xx" --> MarkActive["Verdict: True (is_active: true)"]
+    EvalVerdict -- "404 / 410" --> MarkClosed["Verdict: False (is_active: false)"]
+    EvalVerdict -- "403 / 429 / 5xx / Timeout" --> KeepState["Verdict: None (Preserve Current State)"]
     
-    V1 --> Output["Interactive Letter Studio"]
-    V2 --> Output
-    V3 --> Output
+    MarkActive --> UpdateStorage["update_jobs_liveness() under STORE_LOCK"]
+    MarkClosed --> UpdateStorage
+    KeepState --> UpdateStorage
     
-    Output --> Feedback["Human-in-the-Loop Feedback: 'Insiste plus sur FreeRTOS'"]
-    Feedback --> Refine["POST /api/letters/refine"]
-    Refine --> Output
+    LivenessCheck -- No --> SaveState["Save worker_state.json"]
+    UpdateStorage --> SaveState
+    SaveState --> End["Cycle Completed (Sleep until next interval)"]
 ```
 
 ---
 
-## 5. Security & BYOK Architecture
+## 4. Security Architecture & Threat Defense
 
-1. **Zero Cloud Credential Leakage:** API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `CLAUDE_API_KEY`) are stored locally in `backend/app/data/settings.json` and never transmitted to external telemetry or third parties.
-2. **Masked Egress:** Endpoints returning settings (`GET /api/settings`) mask keys (`AIzaSy...4aB1`). Updating settings without re-entering the key preserves stored secrets safely.
-3. **Local File Size Quotas:** CV uploads are capped strictly at 10 MB in memory with explicit `413 Payload Too Large` rejection to prevent resource exhaustion attacks.
+### 4.1 Multi-Hop SSRF Defense
+External offer ingestion (`POST /api/search/import-offer`) poses a high Server-Side Request Forgery risk. The application enforces a multi-layer guard before making outbound HTTP requests:
+1. **Scheme & Port Check:** Only `http` and `https` on ports `80` and `443` are accepted. Embedded credentials (`user:pass@host`) are rejected.
+2. **DNS Multi-IP Verification:** Every IP returned by DNS is parsed into an `ipaddress` object. The request is aborted if any IP belongs to:
+   - Loopback (`127.0.0.0/8`, `::1`)
+   - RFC 1918 Private networks (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+   - Link-local and cloud metadata (`169.254.0.0/16`, `fe80::/10`)
+   - IPv4-mapped IPv6 notation (`::ffff:127.0.0.1`)
+   - Internal top-level domains (`.local`, `.internal`, `.localhost`)
+3. **Manual Redirect Inspection:** Automated redirect following is disabled. Up to 3 HTTP redirect hops are resolved and re-verified against the full SSRF validation routine before following.
+
+### 4.2 API Key Transport & Masking
+- **Header-Based Transport:** Google Gemini keys are sent via `x-goog-api-key` headers rather than URL query parameters, preventing key exposure in server access logs and proxy captures.
+- **Egress Masking:** Server responses from `GET /api/settings` mask secret keys (`...xxxx`), storing full keys only in the local, git-ignored `settings.json` file.
+- **CORS Restriction:** Local-only origins (`http://localhost:3005`, `http://127.0.0.1:3005`) with `allow_credentials=False`. Default binding restricted to `127.0.0.1`.
 
 ---
 
-## 6. Swiss Scientific Design System Specifications
+## 5. Storage Engine & Concurrency Control
 
-The visual interface is built according to the **International Typographic Style (Swiss Style / Müller-Brockmann Grid)**:
-- **Primary Color:** `#0047AB` (Cobalt Scientific Blue)
-- **Background Color:** `#F8F9FA` (Clean Clinical Paper White)
-- **Text Color:** `#121212` (Ultra-high contrast dark charcoal)
-- **Borders & Dividers:** `1px solid #E5E7EB`
-- **Typography:**
-  - Headers & Technical Data: `JetBrains Mono`, `monospace`
-  - Body & Long-form text: `Inter`, `sans-serif`
-- **Visual Hygiene:** Strict avoidance of emojis in UI headers, buttons, and system badges; use of minimalist SVG wireframe icons and monochrome status pills.
+All persistence in InternReach relies on local JSON documents within `backend/app/data/`:
+- `profile.json`: Structured candidate profile, technical skills, target domains, and key projects.
+- `jobs.json`: Deduplicated catalog of ingested job offers with metadata and liveness status.
+- `history.json`: CRM pipeline records of applied and tracked positions.
+- `settings.json`: BYOK API keys and model configurations.
+- `worker_settings.json` & `worker_state.json`: Background worker schedules and sync telemetry.
 
+### Concurrency & Atomic Writes
+- **Process Lock:** All file updates are synchronized with a reentrant lock (`STORE_LOCK = threading.RLock()`).
+- **Atomic File Swaps:** Files are written to a temporary sibling file via `tempfile.NamedTemporaryFile` and replaced atomically using `os.replace`, preventing partially written files during unexpected server terminations.
+- **Test Isolation:** The `INTERN_REACH_DATA_DIR` environment variable allows automated test harnesses (`pytest`) to redirect all file I/O to a temporary scratch directory without touching production data.
+
+---
+
+## 6. Swiss Scientific Design System Specification
+
+The user interface adheres to the **International Typographic Style** (Swiss Style), emphasizing clarity, structure, and functional minimalism:
+
+| Element | Specification | Rationale |
+|---|---|---|
+| **Primary Typography** | `Inter`, sans-serif | High legibility for long-form scientific text and letter review. |
+| **Monospace Typography** | `JetBrains Mono`, monospace | Technical metadata, ATS match scores, tags, and code badges. |
+| **Primary Accent** | Cobalt Blue (`#0047AB`) | Rigorous, high-contrast, authoritative visual anchor. |
+| **Neutral Background** | Clinical Light Grey (`#F8F9FA`) | Reduced eye fatigue during prolonged reading sessions. |
+| **Card & Container Background** | Pure White (`#FFFFFF`) | Elevated surface contrast with minimal 1px borders (`#E2E8F0`). |
+| **Emoji Policy** | Strictly Prohibited in UI Controls | Decorative emojis undermine scientific authority. Pure SVGs only. |
+
+---
+
+## 7. Architecture Decision Records (ADRs)
+
+- [ADR-001: Dynamic Live Search Tools vs. Static Registries](adr/ADR-001-dynamic-live-search-vs-static-registries.md)
+- [ADR-002: Autonomous Background Worker & Liveness Probing](adr/ADR-002-autonomous-liveness-verification-worker.md)
+- [ADR-003: Hybrid AI and Regex Structured CV Extraction](adr/ADR-003-hybrid-ai-cv-parsing.md)
+- [ADR-004: SSRF Defense, Concurrency Locking & Atomic File Storage](adr/ADR-004-ssrf-defense-and-storage-concurrency.md)

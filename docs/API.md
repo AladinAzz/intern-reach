@@ -104,7 +104,9 @@ Imports and structures an internship offer directly from an external URL or from
 
 **Response Status Codes:**
 - `200 OK`: Successfully parsed and indexed offer.
-- `400 Bad Request`: Neither `url` nor `raw_text` was provided.
+- `400 Bad Request`: Blocked SSRF attempt (private IP, loopback, internal hostname) or missing inputs.
+- `422 Unprocessable Entity`: Invalid request payload or missing URL/raw_text.
+- `502 Bad Gateway`: Target server unreachable or rejected request.
 
 **Request Example:**
 ```json
@@ -518,12 +520,12 @@ Updates the pipeline status of an existing application record in real-time.
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `status` | string | Yes | New status (`"Prêt"`, `"Candidaté"`, `"Entretien"`, `"Offre"`, `"Refusé"`) |
+| `status` | string | Yes | New status (`"Enregistré"`, `"Candidaté"`, `"Entretien"`, `"Accepté"`, `"Refusé"`) |
 
 **Response Status Codes:**
 - `200 OK`: Status updated successfully.
-- `400 Bad Request`: Status field missing or empty.
-- `404 Not Found`: Entry ID not found.
+- `404 Not Found`: Entry ID does not exist in history.
+- `422 Unprocessable Entity`: Status value is not one of the allowed lifecycle states.
 
 **Request Example:**
 ```json
@@ -543,6 +545,7 @@ Deletes an application record from the tracking CRM.
 
 **Response Status Codes:**
 - `200 OK`: Record deleted. Returns updated history array.
+- `404 Not Found`: Entry ID does not exist in history.
 
 ---
 

@@ -2,45 +2,60 @@
 > Full-stack SaaS platform for scientific & embedded systems internship discovery, AI-driven motivation letter generation (3 variants), and candidate pipeline management.
 
 ## Core Architecture & Files
+- [setup.bat]: Windows automated installation script (prerequisites check, venv creation, dependency installation, .env init).
+- [start.bat]: Windows background launcher spawning FastAPI (port 8008) and Next.js (port 3005).
 - [backend/main.py]: FastAPI entry point with CORS, lifespan startup worker, and router mounts.
-- [backend/app/routers/search.py]: Dynamic multi-source search and manual job import endpoints.
+- [backend/app/routers/search.py]: Dynamic multi-source search, AI keyword suggestions, and manual job import endpoints.
 - [backend/app/routers/cv.py]: CV file upload (10 MB limit) and structured candidate profile persistence.
 - [backend/app/routers/letters.py]: 3-variant motivation letter generator, refinement loop, ATS gap analysis, and interview preparation.
 - [backend/app/routers/history.py]: Candidate application tracking CRM (status updates, deletion, full history).
-- [backend/app/routers/worker.py]: Autonomous ingestion and asynchronous HTTP HEAD liveness verification supervisor.
+- [backend/app/routers/worker.py]: Autonomous ingestion and tri-state HTTP liveness verification supervisor.
 - [backend/app/routers/settings.py]: BYOK API key configuration with safe masked egress.
 - [backend/app/services/agent_reach.py]: Aggregates live JobSpy scraping, DDGS web search, and ATS matching algorithms.
 - [backend/app/services/registries.py]: Dynamic query generators and direct web scraping probes for French R&D job boards.
 - [backend/app/services/worker.py]: Background thread worker performing scheduled sync and liveness verification sweeps.
 - [backend/app/services/cv_parser.py]: Hybrid AI (Gemini/OpenAI/Claude) and regex parser for multi-column academic resumes.
+- [backend/app/services/job_extractor.py]: SSRF-hardened HTML extraction with DNS multi-IP validation and manual redirect inspection.
 - [backend/app/services/letter_generator.py]: LLM prompt engineering for Scientific R&D, Tech Agile, and Industrial Corporate cover letters.
-- [backend/app/services/storage.py]: Local JSON-based persistence (`profile.json`, `history.json`, `stored_jobs.json`, `settings.json`).
+- [backend/app/services/storage.py]: Local JSON-based persistence (`profile.json`, `history.json`, `jobs.json`, `settings.json`) under `STORE_LOCK` with `atomic_write_json`.
+- [backend/tests/conftest.py]: Pytest test isolation fixture setting `INTERN_REACH_DATA_DIR` to a clean temporary directory.
+- [backend/tests/test_api.py]: Integration tests for all REST API endpoints.
+- [backend/tests/test_services.py]: Unit tests for services, SSRF defenses, deduplication, and atomic storage.
+- [backend/tests/test_worker.py]: Unit and integration tests for background ingestion worker and settings.
 - [frontend/src/app/page.tsx]: Main Next.js tab controller and dynamic component orchestrator.
-- [frontend/src/components/SearchSection.tsx]: Dynamic search UI with domain filters, liveness toggle, and import modal.
-- [frontend/src/components/CvSection.tsx]: Drag-and-drop CV upload with real-time profile form synchronization.
-- [frontend/src/components/LetterStudio.tsx]: 3-version letter display, copy actions, and iterative feedback refinement loop.
+- [frontend/src/lib/api.ts]: Frontend API client library with structured backend error extraction.
+- [frontend/src/components/SearchSection.tsx]: Dynamic search UI with CV badges, domain filters, liveness toggle, and import modal.
+- [frontend/src/components/CvSection.tsx]: CV upload with real-time profile form synchronization, domain manager, and project CRUD.
+- [frontend/src/components/LetterStudio.tsx]: 3-version letter display, direct pitch cards, interview simulator modal, and feedback refinement loop.
 - [frontend/src/components/HistorySection.tsx]: Candidate CRM table with interactive status dropdowns, letter modals, and delete actions.
 - [frontend/src/components/SettingsModal.tsx]: BYOK modal, LLM provider selection, and worker trigger controls.
 - [docs/API.md]: Comprehensive REST API documentation for all endpoints.
-- [docs/ARCHITECTURE.md]: High-level architecture, Mermaid sequence diagrams, and design system contracts.
+- [docs/ARCHITECTURE.md]: High-level architecture, Mermaid sequence diagrams, security architecture, and design system contracts.
+- [docs/adr/]: Architecture Decision Records (ADR-001 through ADR-004).
 
 ## Key Concepts
 
 ### Dynamic Ingestion & Anti-Bot Bypassing
-InternReach does NOT use static JSON registries. It uses unauthenticated mobile REST API scraping (`JobSpy`) to query Indeed, LinkedIn, and Glassdoor without triggering browser-based Cloudflare interstitials, combined with live localized web queries (`ddgs`) targeting French defense, aerospace, and deep-tech portals (CEA, Inria, Thales, Safran, Welcome to the Jungle, Apec).
+InternReach does NOT use static JSON registries. It uses unauthenticated mobile REST API scraping (`JobSpy`) to query Indeed, LinkedIn, and Glassdoor without triggering browser-based Cloudflare interstitials, combined with live localized web queries (`ddgs`) targeting French defense, aerospace, and deep-tech portals (CEA, Inria, Thales, Safran, Welcome to the Jungle, Apec). All queries derive dynamically from the candidate's CV profile.
 
-### Liveness Verification Loop
-Job listings decay rapidly. The background worker uses asynchronous HTTP `HEAD` probes with concurrency limits (5 concurrent tasks) to flag 404 or dead pages with `is_active: false`. The frontend allows users to hide inactive listings with a single toggle.
+### Multi-Hop SSRF Defense
+All user-supplied external job URLs undergo rigorous validation: scheme & port restrictions (HTTP/HTTPS on 80/443), DNS resolution with multi-IP parsing blocking private (RFC 1918), loopback, link-local, IPv4-mapped IPv6, and internal domains, followed by manual hop-by-hop redirect verification.
 
-### 3-Tier Scientific Letter Personalization
+### Atomic Storage & Thread Safety
+All persistence operations execute under a reentrant process lock (`STORE_LOCK`). Files are updated via `atomic_write_json` (`tempfile` + `os.replace`), eliminating race conditions and partial file corruption. Automated tests run against isolated temporary storage via `INTERN_REACH_DATA_DIR`.
+
+### Tri-State Liveness Probing
+Job listings decay rapidly. The background worker uses asynchronous HTTP probes with concurrency limits (8 tasks) to verify listings. Status codes 404/410 mark offers closed (`is_active: false`), 2xx/3xx mark them active (`is_active: true`), while 403/429 anti-bot responses and timeouts return inconclusive (`None`) and preserve the existing state without false-positive closures.
+
+### 3-Tier Scientific Letter Personalization & Direct Outreach
 Generic motivation letters fail in scientific recruitment. InternReach generates 3 distinct angles for every offer:
 1. `scientific`: Focuses on research methodology, academic publications, state-of-the-art literature, and experimental rigor (adapted for CEA, Inria, CNRS).
 2. `startup`: Emphasizes pragmatism, rapid prototyping, clean code, and cross-functional autonomy (adapted for robotics and deep-tech scale-ups).
 3. `industrial`: Emphasizes system reliability, quality assurance, safety-critical norms (ISO 26262, DO-178C), and V-cycle engineering (adapted for Thales, Airbus, Safran).
+Additionally, Letter Studio generates an accompaniment Cold Email and a recruiter LinkedIn connection note (<300 characters), alongside an interactive 5-question Technical Interview Simulator.
 
 ### Privacy & Bring Your Own Key (BYOK)
-No user data, resumes, or keys are hosted on external servers. All data is saved locally in `backend/app/data/`. All LLM keys (Gemini, OpenAI, Claude) are masked in responses and never exposed to client-side telemetry.
+No user data, resumes, or keys are hosted on external servers. All data is saved locally in `backend/app/data/`. All LLM keys (Gemini, OpenAI, Claude) are masked in responses and never exposed to client-side telemetry. Keys are passed via secure HTTP request headers.
 
 ### Swiss Scientific Design System
 The UI adheres strictly to the International Typographic Style: ultra-clean high-contrast typography (`JetBrains Mono` and `Inter`), clinical background (`#F8F9FA`), cobalt blue accent (`#0047AB`), and zero decorative emojis in production controls.
-
