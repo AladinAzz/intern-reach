@@ -1,0 +1,119 @@
+# ==============================================================================
+# InternReach — Git Ignore Configuration (Full-Stack Python + Next.js)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Security, Secrets & Environment Variables
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+*/.env
+backend/.env
+
+# Local private user data & API key storage
+backend/app/data/settings.json
+backend/app/data/history.json
+backend/app/data/profile.json
+backend/app/data/*.pdf
+backend/app/data/*.docx
+
+# ------------------------------------------------------------------------------
+# Python & Virtual Environments
+# ------------------------------------------------------------------------------
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+backend/.venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*/__pycache__/
+*/**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+*/.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ------------------------------------------------------------------------------
+# Node.js & Next.js Frontend
+# ------------------------------------------------------------------------------
+node_modules/
+*/node_modules/
+frontend/node_modules/
+
+# Next.js build output
+.next/
+*/.next/
+frontend/.next/
+out/
+frontend/out/
+
+# TypeScript cache
+*.tsbuildinfo
+next-env.d.ts
+
+# Package manager locks / logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# IDEs & Developer Tooling
+# ------------------------------------------------------------------------------
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ------------------------------------------------------------------------------
+# Operating System Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini

@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+  --color-primary: #FFFFFF;
+  --color-secondary: #121212;
+  --color-tertiary: #0047AB; /* Azul Científico */
+  --color-neutral: #EFEFEF;
+  --color-surface-green: #006400;
+  --color-accent-red: #8B0000;
+  --color-gold: #FFD700;
+  --color-muted: #6C757D;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #F8F9FA;
+  color: var(--color-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Swiss Scientific Grid Lines & Typography */
+.swiss-container {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.swiss-border {
+  border: 1px solid #E2E4E8;
+}
+
+.swiss-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E4E8;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.swiss-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Print Styles for Motivation Letter */
+@media print {
+  body {
+    background-color: #FFFFFF;
+    color: #000000;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .swiss-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
+
