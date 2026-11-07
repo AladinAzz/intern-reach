@@ -45,3 +45,4 @@ In `app/services/storage.py`:
 
 ### Trade-offs
 - Manual redirect following requires sequential HTTP round-trips (up to 3 hops), adding ~100–300 ms of latency per import request. This is acceptable for user-initiated single-offer imports.
+
