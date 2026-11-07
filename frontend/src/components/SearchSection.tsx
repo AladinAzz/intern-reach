@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { JobOffer, UserProfile } from "@/types";
 import { Search, MapPin, ExternalLink, Sparkles, Building2, Layers, CheckCircle2, Link2, PlusCircle, FileText, Calendar, Clock, ArrowUpDown, RefreshCw, UserCheck } from "lucide-react";
-import { importOffer } from "@/lib/api";
+import { importOffer, suggestKeywordsFromCv, AiKeywordsSuggestion } from "@/lib/api";
 
 const formatDateFrench = (dateStr?: string) => {
   if (!dateStr || dateStr === "nan") return "Récemment";
@@ -66,6 +66,25 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   const [sortBy, setSortBy] = useState<"novelty" | "match">("novelty");
   const [hideExpired, setHideExpired] = useState(false);
 
+  // AI Keyword Suggestion State
+  const [suggestingAi, setSuggestingAi] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AiKeywordsSuggestion | null>(null);
+
+  // Handler to populate search query using AI analysis of candidate's CV
+  const handleAiSuggestKeywords = async () => {
+    setSuggestingAi(true);
+    try {
+      const res = await suggestKeywordsFromCv(profile);
+      if (res && res.suggested_query) {
+        setQuery(res.suggested_query);
+        setAiSuggestions(res);
+        onSearch(res.suggested_query, location);
+      }
+    } finally {
+      setSuggestingAi(false);
+    }
+  };
+
   // Synchronize search query whenever profile is loaded or updated
   useEffect(() => {
     if (defaultCvQuery && (!query || query === "Systèmes embarqués, Edge AI, Traitement du signal")) {
@@ -118,10 +137,21 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
     }
   };
 
-  // Dynamically extract specialty filters strictly from candidate's CV profile
+  // Dynamically extract specialty filters strictly from candidate's CV profile and AI suggestions
   const domainFilters = useMemo(() => {
     const filters = ["Tous"];
     const seen = new Set<string>(["tous"]);
+
+    // Prioritize AI-suggested specialties if available
+    if (aiSuggestions?.specialties && Array.isArray(aiSuggestions.specialties)) {
+      aiSuggestions.specialties.forEach((s) => {
+        const clean = s.trim();
+        if (clean && !seen.has(clean.toLowerCase())) {
+          seen.add(clean.toLowerCase());
+          filters.push(clean);
+        }
+      });
+    }
 
     if (profile?.target_domains && Array.isArray(profile.target_domains)) {
       profile.target_domains.forEach((d) => {
@@ -136,7 +166,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
     if (profile?.technical_skills && Array.isArray(profile.technical_skills)) {
       profile.technical_skills.forEach((s) => {
         const clean = s.trim();
-        if (clean && !seen.has(clean.toLowerCase()) && filters.length < 9) {
+        if (clean && !seen.has(clean.toLowerCase()) && filters.length < 10) {
           seen.add(clean.toLowerCase());
           filters.push(clean);
         }
@@ -144,7 +174,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
     }
 
     return filters;
-  }, [profile]);
+  }, [profile, aiSuggestions]);
 
   const locationPills = [
     { label: "Toute la France", val: "" },
@@ -193,19 +223,32 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                   </span>
                 )}
               </label>
-              {defaultCvQuery && query !== defaultCvQuery && (
+              <div className="flex items-center space-x-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuery(defaultCvQuery);
-                    onSearch(defaultCvQuery, location);
-                  }}
-                  className="text-[10px] font-mono text-swiss-blue hover:underline flex items-center space-x-1"
+                  onClick={handleAiSuggestKeywords}
+                  disabled={suggestingAi}
+                  className="inline-flex items-center space-x-1 px-2 py-0.5 text-[11px] font-mono font-medium bg-gradient-to-r from-blue-50 to-indigo-50 border border-swiss-blue/50 text-swiss-blue hover:bg-swiss-blue hover:text-white rounded transition-colors shadow-2xs disabled:opacity-50"
+                  title="Analyser le CV avec l'IA pour générer et populer la requête optimale"
                 >
-                  <RefreshCw className="w-2.5 h-2.5" />
-                  <span>Rétablir mots-clés du CV</span>
+                  <Sparkles className={`w-3 h-3 ${suggestingAi ? "animate-spin text-swiss-blue" : "text-amber-500"}`} />
+                  <span>{suggestingAi ? "ANALYSE..." : "POPULER AVEC L'IA"}</span>
                 </button>
-              )}
+                {defaultCvQuery && query !== defaultCvQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery(defaultCvQuery);
+                      onSearch(defaultCvQuery, location);
+                    }}
+                    className="text-[10px] font-mono text-swiss-blue hover:underline flex items-center space-x-1"
+                    title="Rétablir les mots-clés initiaux extraits du CV"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" />
+                    <span>Rétablir CV</span>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-3 text-swiss-muted" />
@@ -217,6 +260,42 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                 className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-swiss-border rounded-swiss focus:border-swiss-blue focus:ring-1 focus:ring-swiss-blue outline-none"
               />
             </div>
+
+            {/* AI Keywords Suggestion Banner */}
+            {aiSuggestions && (
+              <div className="mt-2 p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-swiss text-xs font-mono space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-swiss-blue flex items-center space-x-1 text-[11px]">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>REQUÊTE OPTIMISÉE PAR L'IA DEPUIS LE CV</span>
+                  </span>
+                  {aiSuggestions.rationale && (
+                    <span className="text-[10px] text-swiss-muted font-sans italic truncate max-w-[280px]">
+                      {aiSuggestions.rationale}
+                    </span>
+                  )}
+                </div>
+                {aiSuggestions.alternative_queries && aiSuggestions.alternative_queries.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-blue-100">
+                    <span className="text-[10px] text-swiss-muted mr-0.5">Angles :</span>
+                    {aiSuggestions.alternative_queries.map((alt) => (
+                      <button
+                        key={alt.label}
+                        type="button"
+                        onClick={() => {
+                          setQuery(alt.query);
+                          onSearch(alt.query, location);
+                        }}
+                        className="px-1.5 py-0.5 bg-white hover:bg-swiss-blue hover:text-white border border-blue-200 text-swiss-black rounded text-[10px] transition-colors"
+                      >
+                        <span className="font-semibold text-swiss-blue hover:text-white">{alt.label}:</span>{" "}
+                        <span>&quot;{alt.query}&quot;</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-4 space-y-1">

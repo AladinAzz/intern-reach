@@ -13,6 +13,7 @@
 - [Search & Ingestion Endpoints](#search--ingestion-endpoints)
   - [POST /api/search](#post-apisearch)
   - [POST /api/search/import-offer](#post-apisearchimport-offer)
+  - [POST /api/search/suggest-keywords](#post-apisearchsuggest-keywords)
 - [CV & Profile Endpoints](#cv--profile-endpoints)
   - [GET /api/cv/profile](#get-apicvprofile)
   - [POST /api/cv/profile](#post-apicvprofile)
@@ -128,6 +129,62 @@ Imports and structures an internship offer directly from an external URL or from
     "is_active": true,
     "source": "Import Manuel"
   }
+}
+```
+
+---
+
+### POST /api/search/suggest-keywords
+
+Analyzes the candidate's CV profile using AI to synthesize the optimal search query, key specialty facets, and strategic alternative search angles tailored to the job market.
+
+**Parameters (Request Body):**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `profile` | object | No | Candidate profile dictionary. If omitted, the saved profile is loaded from `profile.json`. |
+
+**Response Status Codes:**
+- `200 OK`: AI keyword suggestions successfully generated.
+
+**Request Example:**
+```json
+{
+  "profile": {
+    "full_name": "Amine OTMANI",
+    "education": "Master 2 E3A - Université Paris-Saclay",
+    "target_domains": ["Systèmes Embarqués", "Linux RT", "Edge AI"],
+    "technical_skills": ["C++", "FreeRTOS", "STM32", "ROS 2"]
+  }
+}
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "suggested_query": "Stage Systèmes Embarqués C++ FreeRTOS STM32",
+  "specialties": [
+    "Systèmes Embarqués Temps Réel",
+    "Développement C/C++ Bas Niveau",
+    "FreeRTOS & STM32",
+    "Robotique & ROS 2"
+  ],
+  "alternative_queries": [
+    {
+      "label": "Angle R&D / Scientifique",
+      "query": "Stage R&D Systèmes Embarqués Linux RT C++"
+    },
+    {
+      "label": "Angle Industriel / Aéro",
+      "query": "Stage Ingénieur Logiciel Embarqué STM32 CAN"
+    },
+    {
+      "label": "Angle Robotique & IA",
+      "query": "Stage Edge AI Robotique ROS 2 Perception"
+    }
+  ],
+  "rationale": "Cette combinaison valorise immédiatement vos réalisations en firmware bas niveau et en temps réel."
 }
 ```
 

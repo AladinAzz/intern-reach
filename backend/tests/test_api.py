@@ -167,3 +167,24 @@ def test_interview_prep_endpoint():
     assert "expected_answer" in questions[0]
     assert "tip" in questions[0]
 
+def test_suggest_keywords_endpoint():
+    profile_sample = {
+        "full_name": "Ingénieur Test",
+        "education": "Master 2 E3A Université Paris-Saclay",
+        "target_domains": ["Systèmes Embarqués", "Linux RT", "Edge AI"],
+        "technical_skills": ["C++", "FreeRTOS", "STM32", "ROS 2"],
+        "key_projects": [{"title": "CubeSat", "desc": "Bus I2C et télémétrie"}]
+    }
+    res = client.post("/api/search/suggest-keywords", json={"profile": profile_sample})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert "suggested_query" in data
+    assert len(data["suggested_query"]) > 0
+    assert "specialties" in data
+    assert len(data["specialties"]) > 0
+    assert "alternative_queries" in data
+    assert len(data["alternative_queries"]) >= 1
+    assert "rationale" in data
+
+
