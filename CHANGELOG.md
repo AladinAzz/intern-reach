@@ -61,3 +61,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Technical and behavioral interview question preparation.
   - BYOK (Bring Your Own Key) settings modal supporting Gemini, OpenAI, Claude, and local Ollama.
   - Double-click launcher script `start.bat`.
+

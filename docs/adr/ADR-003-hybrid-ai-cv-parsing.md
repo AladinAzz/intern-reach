@@ -21,3 +21,4 @@ We implemented a two-tier hybrid parsing architecture:
 
 ### Negative / Trade-offs:
 - LLM parsing adds ~1-2 seconds of latency during initial CV upload.
+

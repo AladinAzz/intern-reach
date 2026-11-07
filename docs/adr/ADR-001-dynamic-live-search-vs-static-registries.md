@@ -24,3 +24,4 @@ We decided to completely deprecate static registries and replace them with purel
 ### Negative / Trade-offs:
 - Search latency increases from ~50ms (reading static JSON) to ~2-4s (live network queries).
 - Requires defensive exception handling (e.g. handling DDGS rate limits or empty results gracefully).
+

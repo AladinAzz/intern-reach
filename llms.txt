@@ -43,3 +43,4 @@ No user data, resumes, or keys are hosted on external servers. All data is saved
 
 ### Swiss Scientific Design System
 The UI adheres strictly to the International Typographic Style: ultra-clean high-contrast typography (`JetBrains Mono` and `Inter`), clinical background (`#F8F9FA`), cobalt blue accent (`#0047AB`), and zero decorative emojis in production controls.
+

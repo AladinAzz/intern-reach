@@ -162,3 +162,4 @@ The visual interface is built according to the **International Typographic Style
   - Headers & Technical Data: `JetBrains Mono`, `monospace`
   - Body & Long-form text: `Inter`, `sans-serif`
 - **Visual Hygiene:** Strict avoidance of emojis in UI headers, buttons, and system badges; use of minimalist SVG wireframe icons and monochrome status pills.
+

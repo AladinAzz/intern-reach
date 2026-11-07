@@ -633,3 +633,4 @@ Persists user settings and BYOK credentials. If a masked string (`...`) is passe
 
 **Response Status Codes:**
 - `200 OK`: Settings successfully updated. Masked credentials returned.
+

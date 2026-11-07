@@ -21,3 +21,4 @@ We implemented a lightweight, non-blocking autonomous worker directly integrated
 
 ### Negative / Trade-offs:
 - Some career portals block or return HTTP 403 on automated `HEAD` probes; the prober must use realistic browser user-agent headers to avoid false positives.
+
