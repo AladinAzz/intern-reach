@@ -721,7 +721,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
 
                     {/* Tech Stack Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-2">
-                      {job.tags.map((tag) => (
+                      {(Array.isArray(job.tags) ? job.tags : []).map((tag) => (
                         <span
                           key={tag}
                           className="text-[11px] font-mono px-2 py-0.5 bg-white border border-swiss-border rounded text-swiss-muted"

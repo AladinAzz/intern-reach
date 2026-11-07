@@ -97,7 +97,7 @@ export interface RegistrySource {
   id: string;
   name: string;
   url?: string;
-  target_sites?: string[];
+  target_sites?: string | string[];
   type: string;
   enabled: boolean;
   description: string;

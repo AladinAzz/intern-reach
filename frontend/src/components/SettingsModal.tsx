@@ -230,57 +230,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               <div className="space-y-2">
-                {workerSettings?.sources?.map((src) => (
-                  <div
-                    key={src.id}
-                    className="p-3 rounded border border-swiss-border bg-white flex items-center justify-between gap-3 hover:bg-swiss-neutral/20 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-bold font-mono text-xs text-swiss-black flex items-center space-x-1.5">
-                        <Layers className="w-3.5 h-3.5 text-swiss-blue flex-shrink-0" />
-                        <span className="truncate">{src.name}</span>
-                      </div>
-                      <p className="text-[11px] text-swiss-muted font-sans mt-0.5 line-clamp-1">
-                        {src.description}
-                      </p>
-                      {src.target_sites && src.target_sites.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {src.target_sites.map((site) => (
-                            <span
-                              key={site}
-                              className="px-1.5 py-0.5 text-[10px] font-mono bg-swiss-neutral rounded text-swiss-muted border border-swiss-border"
-                            >
-                              {site}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {src.url && (
-                        <a
-                          href={src.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] text-swiss-blue font-mono hover:underline inline-flex items-center space-x-1 mt-1 truncate max-w-sm"
-                        >
-                          <span className="truncate">{src.url}</span>
-                          <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
-                        </a>
-                      )}
-                    </div>
+                {workerSettings?.sources?.map((src) => {
+                  const targetSites = Array.isArray(src.target_sites)
+                    ? src.target_sites
+                    : typeof src.target_sites === "string"
+                    ? src.target_sites
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                    : [];
 
-                    <button
-                      type="button"
-                      onClick={() => handleToggleSource(src.id)}
-                      className={`px-3 py-1 text-xs font-mono font-semibold rounded transition-colors whitespace-nowrap ${
-                        src.enabled
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-slate-100 text-slate-500 border border-slate-200"
-                      }`}
+                  return (
+                    <div
+                      key={src.id}
+                      className="p-3 rounded border border-swiss-border bg-white flex items-center justify-between gap-3 hover:bg-swiss-neutral/20 transition-colors"
                     >
-                      {src.enabled ? "ACTIVÉ" : "DÉSACTIVÉ"}
-                    </button>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <div className="font-bold font-mono text-xs text-swiss-black flex items-center space-x-1.5">
+                          <Layers className="w-3.5 h-3.5 text-swiss-blue flex-shrink-0" />
+                          <span className="truncate">{src.name}</span>
+                        </div>
+                        <p className="text-[11px] text-swiss-muted font-sans mt-0.5 line-clamp-1">
+                          {src.description}
+                        </p>
+                        {targetSites.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {targetSites.map((site) => (
+                              <span
+                                key={site}
+                                className="px-1.5 py-0.5 text-[10px] font-mono bg-swiss-neutral rounded text-swiss-muted border border-swiss-border"
+                              >
+                                {site}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {src.url && (
+                          <a
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-swiss-blue font-mono hover:underline inline-flex items-center space-x-1 mt-1 truncate max-w-sm"
+                          >
+                            <span className="truncate">{src.url}</span>
+                            <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                          </a>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSource(src.id)}
+                        className={`px-3 py-1 text-xs font-mono font-semibold rounded transition-colors whitespace-nowrap ${
+                          src.enabled
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                            : "bg-slate-100 text-slate-500 border border-slate-200"
+                        }`}
+                      >
+                        {src.enabled ? "ACTIVÉ" : "DÉSACTIVÉ"}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

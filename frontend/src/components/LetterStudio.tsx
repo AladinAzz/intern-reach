@@ -230,10 +230,10 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
             <div className="md:col-span-4 space-y-1">
               <span className="font-mono text-emerald-800 font-semibold flex items-center space-x-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Compétences Validées ({pitchAndGap.matched_skills.length})</span>
+                <span>Compétences Validées ({(pitchAndGap.matched_skills || []).length})</span>
               </span>
               <div className="flex flex-wrap gap-1">
-                {pitchAndGap.matched_skills.map((s) => (
+                {(Array.isArray(pitchAndGap.matched_skills) ? pitchAndGap.matched_skills : []).map((s) => (
                   <span key={s} className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-900 font-mono text-[11px]">
                     {s}
                   </span>
@@ -244,10 +244,10 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
             <div className="md:col-span-4 space-y-1">
               <span className="font-mono text-amber-800 font-semibold flex items-center space-x-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                <span>Points d&apos;Attention / À Valoriser ({pitchAndGap.missing_skills.length})</span>
+                <span>Points d&apos;Attention / À Valoriser ({(pitchAndGap.missing_skills || []).length})</span>
               </span>
               <div className="flex flex-wrap gap-1">
-                {pitchAndGap.missing_skills.length > 0 ? (
+                {Array.isArray(pitchAndGap.missing_skills) && pitchAndGap.missing_skills.length > 0 ? (
                   pitchAndGap.missing_skills.map((s) => (
                     <span key={s} className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-900 font-mono text-[11px]">
                       {s}
