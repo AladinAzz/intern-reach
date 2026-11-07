@@ -265,36 +265,16 @@ class AgentReachService:
 
         results = []
 
-        # 1. Live JobSpy Scraping
+        # 1. Dynamic Live Search Tools (JobSpy Indeed/LinkedIn/Glassdoor + DDGS WTTJ/Apec/LinkedIn + Portails R&D Directs)
         try:
-            live_jobs = await asyncio.to_thread(self._scrape_jobspy, query, target_loc)
-            if live_jobs:
-                results.extend(live_jobs)
+            from app.services.registries import execute_live_search_tools
+            live_tools_jobs = await execute_live_search_tools(query, target_loc)
+            if live_tools_jobs:
+                results.extend(live_tools_jobs)
         except Exception as e:
-            print(f"Erreur scraping JobSpy: {e}")
+            print(f"Notice: Live search tools error: {e}")
 
-        # 2. Curated scientific/R&D pool (matching location criteria)
-        curated_matches = []
-        if is_idf or is_empty:
-            curated_pool = list(CURATED_OFFERS)
-            if query:
-                q_lower = query.lower()
-                query_tokens = [t.strip() for t in q_lower.replace(",", " ").replace("&", " ").split() if len(t.strip()) > 2]
-                for item in curated_pool:
-                    haystack = (item["title"] + " " + item["company"] + " " + item["description"] + " " + " ".join(item["tags"])).lower()
-                    if not query_tokens or any(token in haystack for token in query_tokens):
-                        item_copy = dict(item)
-                        item_copy["source"] = "R&D Lab / CEA-Inria-Thales"
-                        curated_matches.append(item_copy)
-            else:
-                for item in curated_pool:
-                    item_copy = dict(item)
-                    item_copy["source"] = "R&D Lab / CEA-Inria-Thales"
-                    curated_matches.append(item_copy)
-        
-        results.extend(curated_matches)
-
-        # 3. Gemini deep search if regional results are sparse (<3 offers)
+        # 2. Gemini deep search if live results are sparse (<3 offers)
         if len(results) < 3:
             from app.services.letter_generator import letter_generator
             prompt = f"""
@@ -399,9 +379,13 @@ Réponds UNIQUEMENT avec un JSON valide sous la forme d'une liste de 3 objets su
 
     def search_internships(self, query: str = "", location: str = "") -> List[Dict[str, Any]]:
         from app.services.storage import upsert_stored_jobs, load_stored_jobs
+        from app.services.registries import scrape_jobspy_live, search_ddgs_live
         target_loc = location.strip() if location else "France"
-        is_idf = any(term in target_loc.lower() for term in ("paris", "île-de-france", "ile-de-france", "idf", "saclay", "91", "92", "93", "94", "75", "78"))
-        results = list(CURATED_OFFERS) if (is_idf or not location) else []
+        
+        # Query live search tools
+        live_jobspy = scrape_jobspy_live(query, target_loc, 6)
+        live_ddgs = search_ddgs_live(query, target_loc, "welcometothejungle.com, apec.fr, linkedin.com/jobs", 6)
+        results = live_jobspy + live_ddgs
         
         # Merge with stored jobs
         stored = load_stored_jobs()

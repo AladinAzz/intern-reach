@@ -49,9 +49,18 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   const [query, setQuery] = useState("Systèmes embarqués, Edge AI, Traitement du signal");
   const [location, setLocation] = useState("");
   const [sortBy, setSortBy] = useState<"novelty" | "match">("novelty");
+  const [hideExpired, setHideExpired] = useState(false);
+
+  const expiredCount = useMemo(() => {
+    return offers.filter((j) => j.is_active === false).length;
+  }, [offers]);
 
   const sortedOffers = useMemo(() => {
-    return [...offers].sort((a, b) => {
+    let pool = [...offers];
+    if (hideExpired) {
+      pool = pool.filter((j) => j.is_active !== false);
+    }
+    return pool.sort((a, b) => {
       if (sortBy === "novelty") {
         const dA = (a.date_posted || "").slice(0, 10);
         const dB = (b.date_posted || "").slice(0, 10);
@@ -61,7 +70,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         return (b.match_score || 0) - (a.match_score || 0);
       }
     });
-  }, [offers, sortBy]);
+  }, [offers, hideExpired, sortBy]);
 
   // Import Modal State
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -312,7 +321,23 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
           <span>RÉSULTATS DE RECHERCHE // {sortedOffers.length} OPPORTUNITÉS IDENTIFIÉES</span>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="hidden lg:inline-block">MOTEUR: JOBSPY + AGENT-REACH // ZONE: {location ? location.toUpperCase() : "FRANCE ENTIÈRE"}</span>
+          <span className="hidden lg:inline-block">OUTILS EN DIRECT: JOBSPY (INDEED/LINKEDIN) + DDGS CARRIÈRES (WTTJ/APEC) + LABOS R&D</span>
+          
+          {/* Liveness Hide Toggle */}
+          {expiredCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setHideExpired(!hideExpired)}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors border flex items-center space-x-1 ${
+                hideExpired
+                  ? "bg-slate-900 text-white border-slate-900 font-semibold shadow-sm"
+                  : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+              }`}
+            >
+              <span>{hideExpired ? "✓ Clôturées masquées" : `Masquer clôturées (${expiredCount})`}</span>
+            </button>
+          )}
+
           <div className="flex items-center space-x-1 border border-swiss-border rounded p-0.5 bg-white shadow-sm">
             <span className="text-[11px] font-mono text-swiss-muted px-1.5 flex items-center space-x-1">
               <ArrowUpDown className="w-3 h-3 text-swiss-blue" />
@@ -398,9 +423,36 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                       }`}>
                         ● {job.match_score}% MATCH ATS
                       </span>
+                      {job.is_active === false ? (
+                        <span className="swiss-badge bg-rose-50 text-rose-800 border border-rose-300 font-mono text-[10px] font-bold">
+                          ● CLÔTURÉE / 404
+                        </span>
+                      ) : (
+                        <span className="swiss-badge bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[10px]">
+                          ● ACTIVE
+                        </span>
+                      )}
                       {job.source && (
-                        <span className="swiss-badge bg-slate-100 text-slate-800 border border-slate-300 font-mono text-[10px]">
+                        <span className={`swiss-badge font-mono text-[10px] ${
+                          job.source.includes("SimplifyJobs")
+                            ? "bg-purple-50 text-purple-800 border border-purple-200"
+                            : job.source.includes("European Tech")
+                            ? "bg-blue-50 text-blue-800 border border-blue-200"
+                            : job.source.includes("speedyapply")
+                            ? "bg-amber-50 text-amber-800 border border-amber-200"
+                            : "bg-slate-100 text-slate-800 border border-slate-300"
+                        }`}>
                           {job.source}
+                        </span>
+                      )}
+                      {job.salary && (
+                        <span className="swiss-badge bg-emerald-50 text-emerald-900 border border-emerald-300 font-mono text-[10px] font-bold">
+                          💰 {job.salary}
+                        </span>
+                      )}
+                      {job.sponsorship && (
+                        <span className="swiss-badge bg-slate-50 text-slate-700 border border-slate-300 font-mono text-[10px]">
+                          VISA: {job.sponsorship}
                         </span>
                       )}
                       <span className="swiss-badge bg-swiss-neutral text-swiss-black">

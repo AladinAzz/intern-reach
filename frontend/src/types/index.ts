@@ -16,6 +16,10 @@ export interface JobOffer {
   missing_skills?: string[];
   date_posted?: string;
   is_new?: boolean;
+  is_active?: boolean;
+  last_checked?: string;
+  salary?: string;
+  sponsorship?: string;
 }
 
 export interface UserProject {
@@ -78,4 +82,32 @@ export interface InterviewQuestion {
   expected_answer: string;
   tip: string;
 }
+
+export interface WorkerState {
+  is_running: boolean;
+  last_sync: string | null;
+  total_jobs: number;
+  active_jobs: number;
+  expired_jobs: number;
+  last_error: string | null;
+  sources_stats: Record<string, number>;
+}
+
+export interface RegistrySource {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  enabled: boolean;
+  description: string;
+}
+
+export interface WorkerSettings {
+  scan_interval_hours: number;
+  auto_liveness_check: boolean;
+  hide_expired_by_default: boolean;
+  sources: RegistrySource[];
+  target_locations: string[];
+}
+
 

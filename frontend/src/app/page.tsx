@@ -205,6 +205,7 @@ export default function Home() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onSave={handleSaveSettings}
+        onSyncCompleted={() => handleSearch("Systèmes embarqués, Edge AI, Traitement du signal", "")}
       />
     </div>
   );

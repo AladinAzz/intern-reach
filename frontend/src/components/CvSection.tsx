@@ -20,10 +20,27 @@ export const CvSection: React.FC<CvSectionProps> = ({
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [newSkill, setNewSkill] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  // Synchronize internal form state whenever profile prop updates (e.g. after CV upload)
+  React.useEffect(() => {
+    if (profile) {
+      setFormData(profile);
+    }
+  }, [profile]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      await onUploadFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setFileName(file.name);
+      try {
+        await onUploadFile(file);
+        setUploadSuccess(true);
+        setTimeout(() => setUploadSuccess(false), 6000);
+      } catch (err) {
+        console.error("Upload error:", err);
+      }
     }
   };
 
@@ -63,9 +80,10 @@ export const CvSection: React.FC<CvSectionProps> = ({
         <p className="text-xs text-swiss-muted font-sans mt-1 max-w-lg mx-auto">
           L'agent extrait automatiquement vos compétences clés, votre formation et vos projets en systèmes embarqués, traitement du signal et vision.
         </p>
-        <div className="mt-4">
-          <label className="inline-flex items-center space-x-2 px-4 py-2 bg-swiss-blue hover:bg-swiss-blue-hover text-white text-xs font-mono font-semibold rounded-swiss cursor-pointer transition-colors shadow-sm">
-            <span>{uploading ? "ANALYSE DU CV EN COURS..." : "SÉLECTIONNER UN FICHIER PDF"}</span>
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <label className={`inline-flex items-center space-x-2 px-4 py-2 ${uploading ? "bg-slate-400 cursor-not-allowed" : "bg-swiss-blue hover:bg-swiss-blue-hover cursor-pointer"} text-white text-xs font-mono font-semibold rounded-swiss transition-colors shadow-sm`}>
+            {uploading && <div className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent mr-1" />}
+            <span>{uploading ? "EXTRACTION DU CV PAR L'IA EN COURS..." : "SÉLECTIONNER UN FICHIER PDF OU TEXTE"}</span>
             <input
               type="file"
               accept=".pdf,.txt,.md"
@@ -74,6 +92,13 @@ export const CvSection: React.FC<CvSectionProps> = ({
               className="hidden"
             />
           </label>
+
+          {uploadSuccess && (
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded font-mono text-xs mt-1 animate-fade-in">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{fileName || "CV"} analysé avec succès ! Profil et compétences actualisés.</span>
+            </div>
+          )}
         </div>
       </div>
 
