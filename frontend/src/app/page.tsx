@@ -16,6 +16,8 @@ import {
   refineLetter,
   getHistory,
   saveHistoryEntry,
+  updateHistoryStatus,
+  deleteHistoryEntry,
   getSettings,
   saveSettings,
 } from "@/lib/api";
@@ -56,7 +58,7 @@ export default function Home() {
       try {
         const [fetchedOffers, fetchedProfile, fetchedHistory, fetchedSettings] =
           await Promise.allSettled([
-            searchInternships("Systèmes embarqués, Edge AI, Traitement du signal", "Paris, Île-de-France"),
+            searchInternships("Systèmes embarqués, Edge AI, Traitement du signal", ""),
             getProfile(),
             getHistory(),
             getSettings(),
@@ -120,6 +122,22 @@ export default function Home() {
     setHistory(updated);
   };
 
+  const handleUpdateStatus = async (id: string, newStatus: HistoryEntry["status"]) => {
+    setHistory((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
+    );
+    const updated = await updateHistoryStatus(id, newStatus);
+    if (updated && updated.length > 0) {
+      setHistory(updated);
+    }
+  };
+
+  const handleDeleteHistory = async (id: string) => {
+    setHistory((prev) => prev.filter((item) => item.id !== id));
+    const updated = await deleteHistoryEntry(id);
+    setHistory(updated);
+  };
+
   const handleSaveSettings = async (updated: AppSettings) => {
     const res = await saveSettings(updated);
     setSettings(res);
@@ -167,14 +185,18 @@ export default function Home() {
         )}
 
         {activeTab === "history" && (
-          <HistorySection history={history} />
+          <HistorySection
+            history={history}
+            onUpdateStatus={handleUpdateStatus}
+            onDeleteEntry={handleDeleteHistory}
+          />
         )}
       </main>
 
       <footer className="border-t border-swiss-border bg-white py-4 text-center text-xs font-mono text-swiss-muted no-print">
         <div className="swiss-container flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>INTERN.REACH // ESTILO SUÍÇO CIENTÍFICO (DESIGN SYSTEM 2026)</span>
-          <span>SYSTÈMES EMBARQUÉS & IA // PARIS & ÎLE-DE-FRANCE</span>
+          <span>SYSTÈMES EMBARQUÉS & IA // FRANCE // MULTI-SOURCES JOBSPY</span>
         </div>
       </footer>
 

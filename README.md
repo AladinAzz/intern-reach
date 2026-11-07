@@ -45,7 +45,7 @@ Double-cliquez simplement sur **`start.bat`** à la racine, ou exécutez dans un
 ```powershell
 cd backend
 .\venv\Scripts\python.exe main.py
-# Accès API & Documentation Swagger : http://localhost:8000/docs
+# Accès API & Documentation Swagger : http://localhost:8008/docs
 ```
 
 ### Frontend (Terminal 2)

@@ -16,6 +16,8 @@ backend/.env
 backend/app/data/settings.json
 backend/app/data/history.json
 backend/app/data/profile.json
+backend/app/data/jobs.json
+backend/app/data/*.json
 backend/app/data/*.pdf
 backend/app/data/*.docx
 

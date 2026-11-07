@@ -259,113 +259,6 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
         )}
       </div>
 
-      {/* Cold Email & LinkedIn Pitch Section */}
-      {pitchAndGap && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 no-print">
-          <div className="swiss-card p-5 space-y-2 bg-white">
-            <div className="flex items-center justify-between border-b border-swiss-neutral pb-2">
-              <span className="font-mono text-xs font-bold text-swiss-black flex items-center space-x-1.5">
-                <Mail className="w-3.5 h-3.5 text-swiss-blue" />
-                <span>PITCH EMAIL D'ACCOMPAGNEMENT</span>
-              </span>
-              <button
-                onClick={handleCopyEmail}
-                className="px-2 py-0.5 text-xs font-mono bg-swiss-neutral hover:bg-swiss-blue hover:text-white rounded border border-swiss-border transition-colors flex items-center space-x-1"
-              >
-                {copiedEmail ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-swiss-muted" />}
-                <span>{copiedEmail ? "Copié !" : "Copier Email"}</span>
-              </button>
-            </div>
-            <div className="text-[11px] font-mono text-swiss-muted">
-              Objet : {pitchAndGap.cold_email_subject}
-            </div>
-            <div className="text-xs font-sans text-swiss-black/85 whitespace-pre-wrap leading-relaxed bg-swiss-neutral/30 p-3 rounded border border-swiss-border">
-              {pitchAndGap.cold_email_body}
-            </div>
-          </div>
-
-          <div className="swiss-card p-5 space-y-2 bg-white">
-            <div className="flex items-center justify-between border-b border-swiss-neutral pb-2">
-              <span className="font-mono text-xs font-bold text-swiss-black flex items-center space-x-1.5">
-                <Share2 className="w-3.5 h-3.5 text-swiss-blue" />
-                <span>MESSAGE ACCROCHE LINKEDIN RECRUTEUR (&lt;300 CAR.)</span>
-              </span>
-              <button
-                onClick={handleCopyLinkedIn}
-                className="px-2 py-0.5 text-xs font-mono bg-swiss-neutral hover:bg-swiss-blue hover:text-white rounded border border-swiss-border transition-colors flex items-center space-x-1"
-              >
-                {copiedLinkedIn ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-swiss-muted" />}
-                <span>{copiedLinkedIn ? "Copié !" : "Copier Note"}</span>
-              </button>
-            </div>
-            <div className="text-[11px] font-mono text-swiss-muted">
-              Longueur : {pitchAndGap.linkedin_note.length} caractères (Limite LinkedIn : 300)
-            </div>
-            <div className="text-xs font-sans text-swiss-black/85 whitespace-pre-wrap leading-relaxed bg-swiss-neutral/30 p-3 rounded border border-swiss-border">
-              {pitchAndGap.linkedin_note}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Interview Simulator Modal */}
-      {isQuestionsOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-swiss max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-start justify-between border-b border-swiss-neutral pb-3">
-              <div>
-                <h3 className="text-sm font-bold font-sans text-swiss-black flex items-center space-x-1.5">
-                  <HelpCircle className="w-4 h-4 text-swiss-blue" />
-                  <span>Simulateur d'Entretien Technique — Questions Pièges Gemini</span>
-                </h3>
-                <p className="text-xs text-swiss-muted font-mono mt-0.5">
-                  Poste : {job.title} ({job.company})
-                </p>
-              </div>
-              <button
-                onClick={() => setIsQuestionsOpen(false)}
-                className="text-swiss-muted hover:text-swiss-black text-xs font-mono px-2 py-1"
-              >
-                ✕ Fermer
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-              {loadingQuestions ? (
-                <div className="p-8 text-center text-xs font-mono text-swiss-muted">
-                  Génération des questions d'ingénierie par Gemini en cours...
-                </div>
-              ) : (
-                questions.map((q, idx) => (
-                  <div key={idx} className="p-4 bg-swiss-neutral/30 border border-swiss-border rounded space-y-2">
-                    <div className="text-xs font-bold font-sans text-swiss-black flex items-start space-x-2">
-                      <span className="font-mono text-swiss-blue">Q{idx + 1}.</span>
-                      <span>{q.question}</span>
-                    </div>
-                    <div className="text-xs font-sans text-swiss-black/80 bg-white p-2.5 rounded border border-swiss-border/60">
-                      <strong className="font-mono text-swiss-muted text-[11px] block mb-0.5">CE QUE LE RECRUTEUR ÉVALUE :</strong>
-                      {q.expected_answer}
-                    </div>
-                    <div className="text-[11px] font-sans text-emerald-800 bg-emerald-50/70 p-2 rounded border border-emerald-200/60">
-                      <strong>Conseil pour briller :</strong> {q.tip}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="flex justify-end pt-2 border-t border-swiss-neutral">
-              <button
-                onClick={() => setIsQuestionsOpen(false)}
-                className="px-4 py-1.5 bg-swiss-blue text-white text-xs font-mono font-semibold rounded-swiss"
-              >
-                J'AI COMPRIS
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Version Selector Tabs */}
       {versions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 no-print">
@@ -405,20 +298,32 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
       <div className="swiss-card p-8 bg-white space-y-4">
         <div className="flex items-center justify-between border-b border-swiss-neutral pb-3 no-print">
           <span className="text-xs font-mono text-swiss-muted">
-            DOCUMENT SCIENTIFIQUE // VERSION ACTIVE : {activeVersion?.label.toUpperCase()}
+            DOCUMENT SCIENTIFIQUE // VERSION ACTIVE : {activeVersion?.label.toUpperCase() || "GÉNÉRATION EN COURS"}
           </span>
           <span className="text-xs font-mono text-swiss-muted">
             {editedContent.length} CARACTÈRES | {editedContent.split(/\s+/).filter(Boolean).length} MOTS
           </span>
         </div>
 
-        <textarea
-          value={editedContent}
-          onChange={(e) => setEditedContent(e.target.value)}
-          rows={18}
-          className="w-full text-sm font-sans text-swiss-black leading-relaxed outline-none border-none resize-none p-2 focus:ring-0 bg-transparent selection:bg-swiss-blue selection:text-white"
-          placeholder="Génération du contenu de la lettre..."
-        />
+        {loading ? (
+          <div className="py-16 text-center space-y-3">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-swiss-blue border-t-transparent" />
+            <h4 className="text-sm font-bold font-sans text-swiss-black">
+              Génération des 3 versions scientifiques par Gemini en cours...
+            </h4>
+            <p className="text-xs font-mono text-swiss-muted">
+              Dérivation des arguments techniques pour {job.company} selon les exigences recruteur
+            </p>
+          </div>
+        ) : (
+          <textarea
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            rows={18}
+            className="w-full text-sm font-sans text-swiss-black leading-relaxed outline-none border-none resize-none p-2 focus:ring-0 bg-transparent selection:bg-swiss-blue selection:text-white"
+            placeholder="Génération du contenu de la lettre..."
+          />
+        )}
       </div>
 
       {/* Interactive User Feedback Refinement Bar */}
@@ -448,6 +353,76 @@ export const LetterStudio: React.FC<LetterStudioProps> = ({
             <span>{refining ? "RÉVISION..." : "RÉVISER LA LETTRE"}</span>
           </button>
         </form>
+      </div>
+
+      {/* Cold Email & LinkedIn Pitch Section (Positionné et maintenu affiché au-dessous de la réponse) */}
+      <div className="space-y-3 no-print pt-2">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-mono font-bold text-swiss-black uppercase tracking-wider flex items-center space-x-1.5">
+            <Mail className="w-4 h-4 text-swiss-blue" />
+            <span>PITCH EMAIL & NOTE LINKEDIN // GÉNÉRATION DIRECTE</span>
+          </span>
+          <span className="text-[11px] font-mono text-swiss-muted">
+            {loadingPitch ? "SYNTHÈSE EN COURS..." : "PRÊT À L'ENVOI"}
+          </span>
+        </div>
+
+        {loadingPitch && (
+          <div className="swiss-card p-6 text-center space-y-2 bg-white">
+            <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-swiss-blue border-t-transparent" />
+            <p className="text-xs font-mono text-swiss-muted">
+              Génération du Cold Email percutant et de l'accroche LinkedIn (&lt;300 car.) par Gemini...
+            </p>
+          </div>
+        )}
+
+        {pitchAndGap && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="swiss-card p-5 space-y-2 bg-white border-l-2 border-l-swiss-blue shadow-sm">
+              <div className="flex items-center justify-between border-b border-swiss-neutral pb-2">
+                <span className="font-mono text-xs font-bold text-swiss-black flex items-center space-x-1.5">
+                  <Mail className="w-3.5 h-3.5 text-swiss-blue" />
+                  <span>PITCH EMAIL D'ACCOMPAGNEMENT</span>
+                </span>
+                <button
+                  onClick={handleCopyEmail}
+                  className="px-2 py-0.5 text-xs font-mono bg-swiss-neutral hover:bg-swiss-blue hover:text-white rounded border border-swiss-border transition-colors flex items-center space-x-1"
+                >
+                  {copiedEmail ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-swiss-muted" />}
+                  <span>{copiedEmail ? "Copié !" : "Copier Email"}</span>
+                </button>
+              </div>
+              <div className="text-[11px] font-mono text-swiss-muted">
+                <strong>Objet :</strong> {pitchAndGap.cold_email_subject}
+              </div>
+              <div className="text-xs font-sans text-swiss-black/85 whitespace-pre-wrap leading-relaxed bg-swiss-neutral/30 p-3 rounded border border-swiss-border select-all">
+                {pitchAndGap.cold_email_body}
+              </div>
+            </div>
+
+            <div className="swiss-card p-5 space-y-2 bg-white border-l-2 border-l-swiss-blue shadow-sm">
+              <div className="flex items-center justify-between border-b border-swiss-neutral pb-2">
+                <span className="font-mono text-xs font-bold text-swiss-black flex items-center space-x-1.5">
+                  <Share2 className="w-3.5 h-3.5 text-swiss-blue" />
+                  <span>MESSAGE ACCROCHE LINKEDIN RECRUTEUR (&lt;300 CAR.)</span>
+                </span>
+                <button
+                  onClick={handleCopyLinkedIn}
+                  className="px-2 py-0.5 text-xs font-mono bg-swiss-neutral hover:bg-swiss-blue hover:text-white rounded border border-swiss-border transition-colors flex items-center space-x-1"
+                >
+                  {copiedLinkedIn ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-swiss-muted" />}
+                  <span>{copiedLinkedIn ? "Copié !" : "Copier Note"}</span>
+                </button>
+              </div>
+              <div className="text-[11px] font-mono text-swiss-muted">
+                <strong>Longueur :</strong> {pitchAndGap.linkedin_note.length} caractères (Limite LinkedIn : 300)
+              </div>
+              <div className="text-xs font-sans text-swiss-black/85 whitespace-pre-wrap leading-relaxed bg-swiss-neutral/30 p-3 rounded border border-swiss-border select-all">
+                {pitchAndGap.linkedin_note}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

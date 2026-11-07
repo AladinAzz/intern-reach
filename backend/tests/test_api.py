@@ -60,8 +60,9 @@ def test_upload_file_size_limit():
     assert "volumineux" in res.json()["detail"]
 
 def test_history_endpoint():
+    entry_id = "test-history-unique-run"
     entry = {
-        "id": "test-history-1",
+        "id": entry_id,
         "job_title": "Stage Test",
         "company": "Test Aerospace",
         "location": "Paris",
@@ -71,10 +72,23 @@ def test_history_endpoint():
         "selected_version": "R&D / Scientifique",
         "letter_content": "Lettre de motivation de test."
     }
+    # Create or update
     res = client.post("/api/history", json=entry)
     assert res.status_code == 200
     history = client.get("/api/history").json()
-    assert any(h["id"] == "test-history-1" for h in history)
+    assert any(h["id"] == entry_id for h in history)
+
+    # Patch status
+    res_patch = client.patch(f"/api/history/{entry_id}/status", json={"status": "Entretien"})
+    assert res_patch.status_code == 200
+    patched_history = res_patch.json()["history"]
+    assert any(h["id"] == entry_id and h["status"] == "Entretien" for h in patched_history)
+
+    # Clean up entry so tests leave clean state
+    res_del = client.delete(f"/api/history/{entry_id}")
+    assert res_del.status_code == 200
+    final_history = res_del.json()["history"]
+    assert not any(h["id"] == entry_id for h in final_history)
 
 def test_letter_generation_endpoint():
     job_mock = {

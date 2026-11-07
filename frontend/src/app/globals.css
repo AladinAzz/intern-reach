@@ -1,12 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', Consolas, monospace;
   --color-primary: #FFFFFF;
   --color-secondary: #121212;
   --color-tertiary: #0047AB; /* Azul Científico */

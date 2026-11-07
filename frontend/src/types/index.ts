@@ -11,6 +11,11 @@ export interface JobOffer {
   url: string;
   recruiter_type: string;
   recruiter_profile: string;
+  source?: string;
+  matched_skills?: string[];
+  missing_skills?: string[];
+  date_posted?: string;
+  is_new?: boolean;
 }
 
 export interface UserProject {
@@ -45,7 +50,7 @@ export interface HistoryEntry {
   location: string;
   url: string;
   applied_at: string;
-  status: "Enregistré" | "Candidaté" | "Entretien" | "Accepté";
+  status: "Enregistré" | "Candidaté" | "Entretien" | "Accepté" | "Refusé";
   selected_version: string;
   letter_content: string;
 }

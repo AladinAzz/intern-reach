@@ -7,30 +7,33 @@ from app.services.job_extractor import job_extractor
 router = APIRouter(prefix="/api/search", tags=["Search"])
 
 class SearchRequest(BaseModel):
-    query: Optional[str] = "Systèmes embarqués, Edge AI, Traitement du signal"
-    location: Optional[str] = "Paris, Île-de-France"
+    query: Optional[str] = ""
+    location: Optional[str] = ""
 
 class ImportOfferRequest(BaseModel):
     url: Optional[str] = None
     raw_text: Optional[str] = None
 
 @router.post("")
-def search_internships(req: SearchRequest):
-    results = agent_reach_service.search_internships(
+async def search_internships(req: SearchRequest):
+    results = await agent_reach_service.search_internships_async(
         query=req.query or "",
-        location=req.location or "Paris, Île-de-France"
+        location=req.location or ""
     )
     return {
         "status": "success",
         "total": len(results),
-        "location": req.location,
-        "query": req.query,
+        "location": req.location or "Toutes régions",
+        "query": req.query or "Tous domaines",
         "results": results
     }
 
 @router.post("/import-offer")
 async def import_offer(req: ImportOfferRequest):
     offer = await job_extractor.extract_from_url_or_text(url=req.url, raw_text=req.raw_text)
+    if offer and isinstance(offer, dict):
+        from app.services.storage import upsert_stored_jobs
+        upsert_stored_jobs([offer])
     return {
         "status": "success",
         "offer": offer

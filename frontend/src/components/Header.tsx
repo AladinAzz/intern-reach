@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
               <Cpu className="w-3.5 h-3.5 text-swiss-blue" />
               <span>INTERN.REACH // SCIENTIFIC ENGINE</span>
             </span>
-            <span className="hidden sm:inline-block">LOC: PARIS & ÎLE-DE-FRANCE</span>
+            <span className="hidden sm:inline-block">LOC: MULTI-SOURCES // FRANCE & INTERNATIONAL</span>
             <span className="hidden md:inline-block">DOMAINE: SYSTÈMES EMBARQUÉS & IA</span>
           </div>
           <div className="flex items-center space-x-3">
